@@ -1,0 +1,71 @@
+﻿@{
+    ViewData["Title"] = "Kayıt Ol";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <h4 class="mb-1">Kayıt Ol</h4>
+                    <div class="text-muted mb-3">Yeni bir kullanıcı hesabı oluştur.</div>
+
+                    <div class="alert alert-danger d-none" id="regErr"></div>
+                    <div class="alert alert-success d-none" id="regOk"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Ad Soyad</label>
+                        <input class="form-control" id="fullName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">E-posta</label>
+                        <input class="form-control" id="email" type="email" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Şifre</label>
+                        <input class="form-control" id="password" type="password" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Şifre Tekrar</label>
+                        <input class="form-control" id="password2" type="password" />
+                    </div>
+                    <div class="d-grid mb-2">
+                        <button class="btn btn-primary" id="btnRegister" type="button">Kayıt Ol</button>
+                    </div>
+                    <div class="small text-muted">
+                        Zaten hesabın var mı?
+                        <a asp-controller="Account" asp-action="Login">Giriş yap</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $("#btnRegister").on("click", async function () {
+                $("#regErr").addClass("d-none").text("");
+                $("#regOk").addClass("d-none").text("");
+
+                const name = $("#fullName").val();
+                const email = $("#email").val();
+                const p1 = $("#password").val();
+                const p2 = $("#password2").val();
+
+                if (p1 !== p2) {
+                    $("#regErr").removeClass("d-none").text("Şifreler uyuşmuyor.");
+                    return;
+                }
+
+                try {
+                    await UserAuth.register(name, email, p1);
+                    $("#regOk").removeClass("d-none").text("Kayıt başarılı, şimdi giriş yapabilirsiniz.");
+                } catch (e) {
+                    $("#regErr").removeClass("d-none").text(e?.message ?? String(e));
+                }
+            });
+        });
+    </script>
+}

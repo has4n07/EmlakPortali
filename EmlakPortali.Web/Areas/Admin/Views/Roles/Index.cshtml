@@ -1,0 +1,225 @@
+@{
+    ViewData["Title"] = "Roller";
+}
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-gradient">Rol ve Yetki Yönetimi</h3>
+            <div class="text-muted small">Sistem yetkilerini yapılandırın ve kullanıcılara atayın</div>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary shadow-sm" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+            <i class="ph ph-house"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sol Kolon: İşlemler -->
+        <div class="col-lg-4">
+            <!-- Yeni Rol Ekle -->
+            <div class="card shadow-md border-0 mb-4 h-auto">
+                <div class="card-header bg-transparent border-bottom-0 pb-0 pt-4">
+                    <h5 class="fw-bold mb-0"><i class="ph ph-shield-plus text-primary me-2"></i> Yeni Rol Oluştur</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-none py-2" id="roleErr"></div>
+                    <form onsubmit="return false;" class="mb-2">
+                        <label class="form-label text-muted small fw-semibold">Rol Adı</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="ph ph-shield-check"></i></span>
+                            <input class="form-control border-start-0 ps-0" id="roleName" placeholder="Örn: Editor, Manager" autocomplete="off" />
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3 shadow-sm" id="btnAddRole" type="button">
+                            <i class="ph ph-plus-circle me-1"></i> Rolü Kaydet
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Rol Ata -->
+            <div class="card shadow-md border-0 h-auto">
+                <div class="card-header bg-transparent border-bottom-0 pb-0 pt-4">
+                    <h5 class="fw-bold mb-0"><i class="ph ph-user-switch text-success me-2"></i> Kullanıcıya Rol Ata</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-none py-2" id="assignErr"></div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-semibold">Hedef Kullanıcı</label>
+                        <select class="form-select" id="userSelect">
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-semibold">Atanacak Rol</label>
+                        <select class="form-select" id="roleSelect">
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-success w-100 shadow-sm" id="btnAssign" type="button">
+                        <i class="ph ph-check-circle me-1"></i> Yetkilendir
+                    </button>
+                </div>
+            </div>
+            
+            <div class="alert alert-success d-none mt-3 animate__animated animate__fadeIn" id="okBox"></div>
+        </div>
+
+        <!-- Sağ Kolon: Rol Listesi -->
+        <div class="col-lg-8">
+            <div class="card shadow-md border-0 h-100">
+                <div class="card-header bg-transparent border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Mevcut Roller</h5>
+                    <button class="btn btn-sm btn-light border text-muted" onclick="location.reload()"><i class="ph ph-arrows-clockwise"></i> Yenile</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Rol Adı</th>
+                                    <th>Tanımlayıcı (ID)</th>
+                                    <th class="text-end pe-4">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roleRows">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted p-5">
+                                        <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                        <div>Veriler getiriliyor...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            function showErr(sel, msg) {
+                if (!msg) { $(sel).addClass("d-none").text(""); return; }
+                $(sel).removeClass("d-none").text(msg);
+            }
+            function showOk(msg) {
+                if (!msg) { $("#okBox").addClass("d-none").text(""); return; }
+                $("#okBox").removeClass("d-none").text(msg);
+            }
+
+            async function loadRoles() {
+                const res = await AdminApi.get("/api/admin/roles");
+                const roles = res?.data || res?.Data || [];
+
+                $("#roleSelect").html(
+                    '<option value="" disabled selected>Bir rol seçin...</option>' + 
+                    roles.map(r => {
+                        const name = r.name ?? r.Name;
+                        return `<option value="${name}">${name}</option>`;
+                    }).join("")
+                );
+
+                if (!roles.length) {
+                    $("#roleRows").html(`<tr><td colspan="3" class="text-center text-muted p-4">Hiç rol bulunamadı.</td></tr>`);
+                    return;
+                }
+
+                $("#roleRows").html(roles.map(r => {
+                    const id = r.id ?? r.Id;
+                    const name = r.name ?? r.Name;
+                    
+                    let badgeClass = "bg-primary text-white";
+                    if(name.toLowerCase() === "admin") badgeClass = "bg-danger text-white";
+                    else if(name.toLowerCase() === "user") badgeClass = "bg-success text-white";
+                    
+                    return `
+                        <tr>
+                            <td class="ps-4">
+                                <span class="badge ${badgeClass} px-3 py-2 rounded-pill fs-6"><i class="ph ph-shield me-1"></i> ${name}</span>
+                            </td>
+                            <td class="text-muted font-monospace small">${id}</td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-light text-danger disabled" title="Silme işlemi devre dışı"><i class="ph ph-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                }).join(""));
+            }
+
+            async function loadUsers() {
+                const res = await AdminApi.get("/api/admin/users");
+                const users = res?.data || res?.Data || [];
+                $("#userSelect").html(
+                    '<option value="" disabled selected>Bir kullanıcı seçin...</option>' + 
+                    users.map(u => {
+                        const id = u.id ?? u.Id;
+                        const email = u.email ?? u.Email;
+                        const fullName = u.fullName ?? u.FullName;
+                        return `<option value="${id}">${fullName ? fullName + ' ('+email+')' : email}</option>`;
+                    }).join("")
+                );
+            }
+
+            $("#btnAddRole").on("click", async function () {
+                showErr("#roleErr", null); showOk(null);
+                const name = $("#roleName").val().trim();
+                if (!name) { showErr("#roleErr", "Rol adı zorunlu."); return; }
+                
+                const btn = $(this);
+                const og = btn.html();
+                btn.prop("disabled", true).html('<i class="ph ph-spinner-gap ph-spin me-1"></i> Ekleniyor...');
+                
+                try {
+                    await AdminApi.post("/api/admin/roles", { name });
+                    $("#roleName").val("");
+                    await loadRoles();
+                    showOk("Yeni rol başarıyla sisteme eklendi.");
+                } catch (e) {
+                    showErr("#roleErr", e?.message ?? String(e));
+                } finally {
+                    btn.prop("disabled", false).html(og);
+                }
+            });
+
+            $("#btnAssign").on("click", async function () {
+                showErr("#assignErr", null); showOk(null);
+                const userId = $("#userSelect").val();
+                const roleName = $("#roleSelect").val();
+                
+                if(!userId || !roleName) {
+                    showErr("#assignErr", "Kullanıcı ve Rol seçimi zorunludur."); return;
+                }
+                
+                const btn = $(this);
+                const og = btn.html();
+                btn.prop("disabled", true).html('<i class="ph ph-spinner-gap ph-spin me-1"></i> Atanıyor...');
+                
+                try {
+                    await AdminApi.post("/api/admin/roles/assign", { userId, roleName });
+                    showOk("Seçili rol başarıyla kullanıcıya Tanimlandı!");
+                    $("#userSelect").val("");
+                    $("#roleSelect").val("");
+                } catch (e) {
+                    showErr("#assignErr", e?.message ?? String(e));
+                } finally {
+                    btn.prop("disabled", false).html(og);
+                }
+            });
+
+            (async function init() {
+                try {
+                    await loadUsers();
+                    await loadRoles();
+                } catch (e) {
+                    showErr("#roleErr", e?.message ?? "Token yoksa önce giriş yap.");
+                }
+            })();
+        });
+    </script>
+}
+

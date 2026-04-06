@@ -1,0 +1,156 @@
+@{
+    ViewData["Title"] = "İlan Görselleri";
+    var listingId = ViewBag.ListingId;
+}
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-gradient">İlan Fotoğrafları (#@listingId)</h3>
+            <div class="text-muted small">İlana yeni fotoğraflar ekleyin veya mevcutları kaldırın</div>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Listings" asp-action="Index">
+                <i class="ph ph-arrow-left"></i> İlanlara Dön
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sol: Yeni Görsel Ekle -->
+        <div class="col-lg-4">
+            <div class="card shadow-md border-0 h-auto">
+                <div class="card-header bg-transparent border-bottom-0 pb-0 pt-4">
+                    <h5 class="fw-bold mb-0"><i class="ph ph-image text-primary me-2"></i> Yeni Fotoğraf Ekle</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-none py-2" id="errBox"></div>
+                    <form onsubmit="return false;">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-semibold">Görsel Seç</label>
+                            <input type="file" class="form-control" id="imgFile" accept=".jpg,.jpeg,.png,.webp" multiple />
+                        </div>
+
+                        <button class="btn btn-primary w-100 shadow-sm" id="btnAdd" type="button">
+                            <i class="ph ph-plus-circle me-1"></i> Fotoğrafı Kaydet
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ: Görsel Listesi -->
+        <div class="col-lg-8">
+            <div class="card shadow-md border-0 h-100">
+                <div class="card-header bg-transparent border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Mevcut Görseller</h5>
+                </div>
+                <div class="card-body p-4 bg-light">
+                    <div class="row g-3" id="imageGrid">
+                        <div class="col-12 text-center text-muted p-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <div class="mt-2">Yükleniyor...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const LI_ID = parseInt("@listingId");
+
+        function setErr(msg) {
+            if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+            $("#errBox").removeClass("d-none").text(msg);
+        }
+
+        async function loadImages() {
+            try {
+                const res = await AdminApi.get(`/api/listings/${LI_ID}`);
+                const data = res?.data || res?.Data;
+                if (!data) throw new Error("İlan verisi alınamadı.");
+
+                const imgs = data.images || data.Images || [];
+                
+                if (!imgs.length) {
+                    $("#imageGrid").html(`<div class="col-12 text-center text-muted p-5"><i class="ph ph-images fs-1 mb-2"></i><br/>Henüz hiç fotoğraf eklenmemiş.</div>`);
+                    return;
+                }
+
+                const html = imgs.map(img => {
+                    const id = img.id || img.Id;
+                    const url = img.url || img.Url;
+                    const sort = img.sortOrder || img.SortOrder;
+                    
+                    return `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border-0 shadow-sm h-100 overflow-hidden">
+                            <img src="${url}" class="card-img-top" style="height: 140px; object-fit: cover;" alt="Görsel">
+                            <div class="card-body p-2 d-flex justify-content-between align-items-center bg-white border-top">
+                                <span class="badge bg-light text-dark border">Sıra: ${sort}</span>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteImg(${id})"><i class="ph ph-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }).join("");
+
+                $("#imageGrid").html(html);
+            } catch (e) {
+                $("#imageGrid").html(`<div class="col-12 text-center text-danger p-5">Hata: ${e?.message || "Yüklenemedi"}</div>`);
+            }
+        }
+
+        async function deleteImg(imgId) {
+            if(!confirm("Bu fotoğrafı kalıcı olarak silmek istediğinize emin misiniz?")) return;
+            try {
+                await AdminApi.delete(`/api/listings/${LI_ID}/images/${imgId}`);
+                await loadImages();
+            } catch (e) {
+                alert("Silinemedi: " + (e?.message || String(e)));
+            }
+        }
+
+        $(function () {
+            $("#btnAdd").on("click", async function () {
+                setErr(null);
+                
+                const fileInput = $("#imgFile")[0];
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    setErr("Lütfen en az bir resim dosyası seçin."); return;
+                }
+                
+                const files = fileInput.files;
+                
+                const btn = $(this);
+                const og = btn.html();
+                btn.prop("disabled", true).html('<i class="ph ph-spinner-gap ph-spin me-1"></i> Yükleniyor...');
+
+                try {
+                    for(let i=0; i<files.length; i++) {
+                        const file = files[i];
+                        // Önce resmi sunucuya yükle
+                        const uploadRes = await AdminApi.upload("/api/listings/upload-image", file);
+                        const uploadedUrl = uploadRes?.data?.url || uploadRes?.Data?.Url;
+                        
+                        if (!uploadedUrl) throw new Error(`${file.name} yüklendi fakat URL alınamadı.`);
+
+                        // Sonra İlana bağla
+                        await AdminApi.post(`/api/listings/${LI_ID}/images`, { url: uploadedUrl, sortOrder: 0 });
+                    }
+                    $("#imgFile").val("");
+                    await loadImages();
+                } catch (e) {
+                    setErr(e?.message ?? String(e));
+                } finally {
+                    btn.prop("disabled", false).html(og);
+                }
+            });
+
+            loadImages();
+        });
+    </script>
+}

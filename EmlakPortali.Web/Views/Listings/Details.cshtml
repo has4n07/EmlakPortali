@@ -1,0 +1,100 @@
+﻿@model int
+@{
+    ViewData["Title"] = "İlan Detayı";
+}
+
+<div class="container" id="detailRoot" data-id="@Model">
+    <div id="errBox" class="alert alert-danger d-none mt-3"></div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <img id="coverImg" src="https://via.placeholder.com/900x400?text=Emlak"
+                     class="card-img-top" style="max-height:400px;object-fit:cover;">
+                <div class="card-body">
+                    <h3 class="card-title" id="title">İlan</h3>
+                    <div class="text-muted small mb-2" id="location"></div>
+                    <p class="card-text" id="description"></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="text-muted small mb-1" id="listingTypeText"></div>
+                    <div class="h3 fw-semibold text-primary" id="priceText">-</div>
+                    <hr>
+                    <ul class="list-unstyled small mb-3" id="specs">
+                    </ul>
+                    <button class="btn btn-outline-danger w-100" type="button" id="btnFavorite">
+                        Favorilere Ekle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const PublicApi = (function () {
+            const baseUrl = "https://localhost:7293";
+            async function get(url) {
+                const res = await fetch(baseUrl + url);
+                const text = await res.text();
+                let json = null; try { json = text ? JSON.parse(text) : null; } catch { }
+                if (!res.ok) throw new Error(json?.message || json?.Message || text || (res.status + " " + res.statusText));
+                return json;
+            }
+            return { get };
+        })();
+
+        $(function () {
+            const root = $("#detailRoot");
+            const id = root.data("id");
+
+            function setErr(msg) {
+                if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+                $("#errBox").removeClass("d-none").text(msg);
+            }
+
+            async function load() {
+                setErr(null);
+                try {
+                    const res = await PublicApi.get(`/api/listings/${id}`);
+                    const d = res?.data || res?.Data;
+                    if (!d) { setErr("İlan bulunamadı."); return; }
+
+                    $("#title").text(d.title ?? d.Title);
+                    $("#priceText").text(`${(d.price ?? d.Price)?.toLocaleString?.("tr-TR") ?? d.price ?? d.Price} ₺`);
+                    $("#location").text(`${d.cityName ?? d.CityName ?? ""} ${d.districtName ? " / " + (d.districtName ?? d.DistrictName) : ""}`);
+                    $("#description").text(d.description ?? d.Description ?? "");
+
+                    const img = d.coverImageUrl ?? d.CoverImageUrl;
+                    if (img) $("#coverImg").attr("src", img);
+
+                    const specs = [];
+                    const add = (label, value) => { if (value != null && value !== "") specs.push(`<li>${label}: <strong>${value}</strong></li>`); };
+                    add("Oda", d.roomCount ?? d.RoomCount);
+                    add("Banyo", d.bathCount ?? d.BathCount);
+                    add("Net m²", d.areaNetM2 ?? d.AreaNetM2);
+                    add("Brüt m²", d.areaGrossM2 ?? d.AreaGrossM2);
+                    add("Kat", d.floor ?? d.Floor);
+                    add("Toplam Kat", d.totalFloors ?? d.TotalFloors);
+                    $("#specs").html(specs.join(""));
+
+                    const lt = d.listingType ?? d.ListingType;
+                    $("#listingTypeText").text(lt === 2 ? "Kiralık" : "Satılık");
+                } catch (e) {
+                    setErr(e?.message ?? String(e));
+                }
+            }
+
+            $("#btnFavorite").on("click", function () {
+                alert("Şimdilik sadece görsel buton; finalde API'ye bağlanabilir.");
+            });
+
+            load();
+        });
+    </script>
+}

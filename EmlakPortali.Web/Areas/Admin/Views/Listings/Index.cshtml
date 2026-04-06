@@ -1,0 +1,263 @@
+@{
+    ViewData["Title"] = "İlan Yönetimi";
+}
+
+<div class="container">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-0">İlan Yönetimi</h3>
+            <div class="text-muted">Arama, onay ve aktiflik</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+            <a class="btn btn-primary" asp-area="Admin" asp-controller="Listings" asp-action="Create">
+                <i class="ph ph-plus"></i> Yeni İlan Ekle
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label">Arama</label>
+                    <input class="form-control" id="q" placeholder="Başlık / açıklama" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Kategori</label>
+                    <select class="form-select" id="categoryId">
+                        <option value="">Tüm Kategoriler</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Aktif</label>
+                    <select class="form-select" id="isActive">
+                        <option value="">Hepsi</option>
+                        <option value="true">Aktif</option>
+                        <option value="false">Pasif</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sıralama</label>
+                    <select class="form-select" id="orderBy">
+                        <option value="1">En yeni</option>
+                        <option value="2">Fiyat (Artan)</option>
+                        <option value="3">Fiyat (Azalan)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Sayfa Boyutu</label>
+                    <select class="form-select" id="pageSize">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-primary" id="btnSearch" type="button">Ara</button>
+                <button class="btn btn-outline-secondary" id="btnClear" type="button">Temizle</button>
+            </div>
+            <div class="alert alert-danger d-none mt-3" id="errBox"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:80px;">Id</th>
+                            <th>Başlık</th>
+                            <th style="width:140px;">Fiyat</th>
+                            <th style="width:160px;">Tarih</th>
+                            <th style="width:110px;">Aktif</th>
+                            <th style="width:220px;">İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows">
+                        <tr><td colspan="6" class="text-muted p-4">Liste yüklenmedi.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between mt-3">
+        <div class="text-muted small" id="pagingInfo">-</div>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary" id="prevPage" type="button">Önceki</button>
+            <button class="btn btn-outline-secondary" id="nextPage" type="button">Sonraki</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ─── GLOBAL: onclick'den erişilebilir şekilde tanımlandı ─────────────────
+        async function toggleActive(id, status) {
+            try {
+                const res = await AdminApi.put(`/api/admin/listings/${id}/active?isActive=${status}`, {});
+                // Listeyi yenile
+                if (window.__reloadListings) window.__reloadListings();
+            } catch (e) {
+                alert("Aktif/Pasif güncellenirken hata: " + (e?.message || e));
+            }
+        }
+
+        $(function () {
+            let page = 1;
+            let total = 0;
+
+            function setErr(msg) {
+                if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+                $("#errBox").removeClass("d-none").text(msg);
+            }
+
+            function toTryBool(v) {
+                if (v === "") return null;
+                return v === "true";
+            }
+
+            // Kategori dropdown'ını yükle
+            AdminApi.get("/api/categories").then(res => {
+                const cats = res?.data || res?.Data || [];
+                cats.forEach(c => {
+                    $("#categoryId").append(`<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`);
+                });
+                // URL'den categoryId geliyorsa seç (Kategoriler sayfasındaki "İlanlar" linki)
+                const urlParams = new URLSearchParams(window.location.search);
+                const catIdFromUrl = urlParams.get("categoryId");
+                if (catIdFromUrl) {
+                    $("#categoryId").val(catIdFromUrl);
+                    load();
+                }
+            }).catch(() => {});
+
+            window.__reloadListings = load;
+
+            async function load() {
+                setErr(null);
+                const qs = new URLSearchParams();
+                qs.set("page", String(page));
+                qs.set("pageSize", $("#pageSize").val());
+                qs.set("orderBy", $("#orderBy").val());
+
+                const q = $("#q").val();
+                if (q) qs.set("q", q);
+
+                const isActive = toTryBool($("#isActive").val());
+                if (isActive !== null) qs.set("isActive", String(isActive));
+
+                const catId = $("#categoryId").val();
+                if (catId) qs.set("categoryId", catId);
+
+                const res = await AdminApi.get("/api/admin/listings?" + qs.toString());
+                const data = res?.data || res?.Data;
+                const items = data?.items || data?.Items || [];
+                total = data?.totalCount || data?.TotalCount || 0;
+                const pageSize = data?.pageSize || data?.PageSize || 0;
+                const currentPage = data?.page || data?.Page || page;
+
+                $("#pagingInfo").text(`Sayfa ${currentPage} | Toplam ${total} kayıt`);
+
+                if (!items.length) {
+                    $("#rows").html(`<tr><td colspan="6" class="text-muted p-4">Kayıt yok.</td></tr>`);
+                    return;
+                }
+
+                const html = items.map(x => {
+                    const id = x.id ?? x.Id;
+                    const title = x.title ?? x.Title;
+                    const price = x.price ?? x.Price;
+                    const rawDate = x.created ?? x.Created;
+                    const created = rawDate ? new Date(rawDate).toLocaleDateString("tr-TR") : "-";
+                    
+                    const isActive = x.isActive ?? x.IsActive;
+                        
+                    const activeBadge = isActive 
+                        ? `<span class="badge bg-primary px-2 py-1"><i class="ph ph-eye"></i> Aktif</span>` 
+                        : `<span class="badge bg-secondary px-2 py-1"><i class="ph ph-eye-slash"></i> Pasif</span>`;
+
+                    const btnIcon = isActive ? `<i class="ph ph-eye-slash"></i> Pasif Yap` : `<i class="ph ph-eye"></i> Aktif Yap`;
+                    const btnClass = isActive ? `btn-warning` : `btn-success`;
+
+                    const actionBtns = `
+                        <div class="d-flex flex-nowrap gap-2 justify-content-end">
+                            <button class="btn btn-sm ${btnClass} text-white" onclick="toggleActive(${id}, ${!isActive})">${btnIcon}</button>
+                            <a href="/Admin/Listings/Edit/${id}" class="btn btn-sm btn-outline-primary"><i class="ph ph-pencil-simple"></i> Düzenle</a>
+                            <a href="/Admin/Listings/Images/${id}" class="btn btn-sm btn-outline-info"><i class="ph ph-image"></i> Fotoğraflar</a>
+                            <button class="btn btn-sm btn-danger" data-delete="${id}"><i class="ph ph-trash"></i> Kaldır</button>
+                        </div>
+                    `;
+                    
+                    return `<tr>
+                        <td>${id}</td>
+                        <td class="fw-semibold">${title}</td>
+                        <td>${price} ₺</td>
+                        <td class="text-muted small">${created}</td>
+                        <td>${activeBadge}</td>
+                        <td>${actionBtns}</td>
+                    </tr>`;
+                }).join("");
+
+                $("#rows").html(html);
+            }
+
+            $("#btnSearch").on("click", async function () {
+                page = 1;
+                try { await load(); } catch (e) { setErr(e?.message ?? String(e)); }
+            });
+
+            $("#btnClear").on("click", function () {
+                $("#q").val("");
+                $("#isActive").val("");
+                $("#categoryId").val("");
+                $("#orderBy").val("1");
+                $("#pageSize").val("25");
+                page = 1;
+                load();
+            });
+
+            $("#prevPage").on("click", async function () {
+                if (page <= 1) return;
+                page--;
+                try { await load(); } catch (e) { setErr(e?.message ?? String(e)); }
+            });
+            $("#nextPage").on("click", async function () {
+                const ps = parseInt($("#pageSize").val(), 10);
+                const maxPage = Math.ceil((total || 0) / ps);
+                if (page >= maxPage) return;
+                page++;
+                try { await load(); } catch (e) { setErr(e?.message ?? String(e)); }
+            });
+
+            $("#rows").on("click", "button[data-delete]", async function () {
+                if (!confirm("Bu ilanı tamamen kaldırmak istediğinize emin misiniz?")) return;
+                setErr(null);
+                const id = $(this).data("delete");
+                const ogHTML = $(this).html();
+                $(this).prop("disabled", true).text("...");
+                try {
+                    await AdminApi.delete(`/api/listings/${id}`);
+                    await load();
+                } catch (e) { 
+                    setErr(e?.message ?? String(e)); 
+                    $(this).prop("disabled", false).html(ogHTML);
+                }
+            });
+
+            // toggleActive is a global function above, no need to redefine here
+
+            (async function init() {
+                try {
+                    await load();
+                } catch (e) {
+                    setErr(e?.message ?? "Token yoksa önce giriş yap.");
+                }
+            })();
+        });
+    </script>
+}
+

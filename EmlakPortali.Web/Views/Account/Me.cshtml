@@ -1,0 +1,220 @@
+﻿@{
+    ViewData["Title"] = "Hesabım";
+}
+
+<div class="container">
+    <div class="row g-3 mt-3">
+        <div class="col-md-3">
+            <div class="list-group">
+                <a href="#tabProfile" class="list-group-item list-group-item-action active" data-bs-toggle="tab">Profilim</a>
+                <a href="#tabMyListings" class="list-group-item list-group-item-action" data-bs-toggle="tab">İlanlarım</a>
+                <a href="#tabFavorites" class="list-group-item list-group-item-action" data-bs-toggle="tab">Favorilerim</a>
+            </div>
+            <button class="btn btn-outline-danger btn-sm mt-3" id="btnLogout" type="button">Çıkış yap</button>
+        </div>
+        <div class="col-md-9">
+            <div id="errBox" class="alert alert-danger d-none"></div>
+            <div class="tab-content">
+                <!-- Profil -->
+                <div class="tab-pane fade show active" id="tabProfile">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="mb-3">Profil Bilgilerim</h5>
+                            <div class="alert alert-success d-none" id="okProfile"></div>
+                            <div class="mb-3">
+                                <label class="form-label">E-posta</label>
+                                <input class="form-control" id="email" disabled />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Ad Soyad</label>
+                                <input class="form-control" id="fullName" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Telefon</label>
+                                <input class="form-control" id="phoneNumber" />
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-primary" id="btnSaveProfile" type="button">Kaydet</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İlanlarım -->
+                <div class="tab-pane fade" id="tabMyListings">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0">İlanlarım</h5>
+                        <span class="small text-muted" id="myListingsInfo">-</span>
+                    </div>
+                    <div class="list-group mb-3" id="myListingsRows">
+                        <div class="list-group-item text-muted">Yükleniyor...</div>
+                    </div>
+                </div>
+
+                <!-- Favorilerim -->
+                <div class="tab-pane fade" id="tabFavorites">
+                    <h5 class="mb-2">Favorilerim</h5>
+                    <div class="list-group" id="favRows">
+                        <div class="list-group-item text-muted">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+                const UserApi = (function () {
+                    const base = UserAuth.apiBase;
+                    async function request(method, url, body) {
+                        const token = UserAuth.getToken();
+                        if (!token) throw new Error("Lütfen önce giriş yapın.");
+                        const res = await fetch(base + url, {
+                            method,
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": "Bearer " + token
+                            },
+                            body: body ? JSON.stringify(body) : undefined
+                        });
+                        const text = await res.text();
+                        let json = null; try { json = text ? JSON.parse(text) : null; } catch { }
+                        if (!res.ok || (!json?.status && !json?.Status)) {
+                            throw new Error(json?.message || json?.Message || text || (res.status + " " + res.statusText));
+                        }
+                        return json;
+                    }
+                    return {
+                        get: (u) => request("GET", u),
+                        put: (u, b) => request("PUT", u, b),
+                        post: (u, b) => request("POST", u, b),
+                        del: (u) => request("DELETE", u)
+                    };
+                })();
+
+                $(function () {
+                    function setErr(msg) {
+                        if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+                        $("#errBox").removeClass("d-none").text(msg);
+                    }
+
+                    async function loadProfile() {
+                        try {
+                            const res = await UserApi.get("/api/profile/me");
+                            const u = res?.data || res?.Data || {};
+                            $("#email").val(u.email ?? u.Email ?? "");
+                            $("#fullName").val(u.fullName ?? u.FullName ?? "");
+                            $("#phoneNumber").val(u.phoneNumber ?? u.PhoneNumber ?? "");
+                        } catch (e) {
+                            setErr(e?.message ?? String(e));
+                        }
+                    }
+
+                    $("#btnSaveProfile").on("click", async function () {
+                        $("#okProfile").addClass("d-none").text("");
+                        try {
+                            await UserApi.put("/api/profile", {
+                                fullName: $("#fullName").val(),
+                                phoneNumber: $("#phoneNumber").val()
+                            });
+                            $("#okProfile").removeClass("d-none").text("Profil güncellendi.");
+                        } catch (e) {
+                            setErr(e?.message ?? String(e));
+                        }
+                    });
+
+                    async function loadMyListings() {
+                        try {
+                            const qs = new URLSearchParams({ page: 1, pageSize: 100, orderBy: 1 });
+                            const res = await UserApi.get("/api/listings/mine?" + qs.toString());
+                            const data = res?.data || res?.Data;
+                            const items = data?.items || data?.Items || [];
+                            const total = data?.totalCount || data?.TotalCount || items.length;
+                            $("#myListingsInfo").text(`Toplam ${total} ilan`);
+                            if (!items.length) {
+                                $("#myListingsRows").html('<div class="list-group-item text-muted">Henüz ilanınız yok.</div>');
+                                return;
+                            }
+                            const html = items.map(x => {
+                                const id = x.id ?? x.Id;
+                                const title = x.title ?? x.Title;
+                                const price = x.price ?? x.Price;
+                                const created = x.createdAtUtc ?? x.CreatedAtUtc;
+                                return `
+        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-start" href="/Listings/Details/${id}">
+          <div>
+            <div class="fw-semibold">${title}</div>
+            <div class="text-muted small">${created}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold text-primary">${price?.toLocaleString?.("tr-TR") ?? price} ₺</div>
+          </div>
+        </a>`;
+                            }).join("");
+                            $("#myListingsRows").html(html);
+                        } catch (e) {
+                            setErr(e?.message ?? String(e));
+                        }
+                    }
+
+                    async function loadFavorites() {
+                        try {
+                            const resIds = await UserApi.get("/api/favorites");
+                            const ids = resIds?.data || resIds?.Data || [];
+                            if (!ids.length) {
+                                $("#favRows").html('<div class="list-group-item text-muted">Favori ilanınız yok.</div>');
+                                return;
+                            }
+                            const items = [];
+                            for (const id of ids) {
+                                try {
+                                    const r = await UserApi.get(`/api/listings/${id}`);
+                                    const d = r?.data || r?.Data;
+                                    if (d) items.push(d);
+                                } catch { }
+                            }
+                            if (!items.length) {
+                                $("#favRows").html('<div class="list-group-item text-muted">Favori ilanınız yok.</div>');
+                                return;
+                            }
+                            const html = items.map(d => {
+                                const id = d.id ?? d.Id;
+                                const title = d.title ?? d.Title;
+                                const price = d.price ?? d.Price;
+                                const city = d.cityName ?? d.CityName;
+                                const district = d.districtName ?? d.DistrictName;
+                                return `
+        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-start" href="/Listings/Details/${id}">
+          <div>
+            <div class="fw-semibold">${title}</div>
+            <div class="text-muted small">${city ?? ""} ${district ? " / " + district : ""}</div>
+          </div>
+          <div class="text-end">
+            <div class="fw-semibold text-primary">${price?.toLocaleString?.("tr-TR") ?? price} ₺</div>
+          </div>
+        </a>`;
+                            }).join("");
+                            $("#favRows").html(html);
+                        } catch (e) {
+                            setErr(e?.message ?? String(e));
+                        }
+                    }
+
+                    $("#btnLogout").on("click", function () {
+                        UserAuth.clear();
+                        window.location.href = "/Account/Login";
+                    });
+
+                    (async function init() {
+                        try {
+                            await loadProfile();
+                            await loadMyListings();
+                            await loadFavorites();
+                        } catch (e) {
+                            setErr(e?.message ?? String(e));
+                        }
+                    })();
+                });
+    </script>
+}

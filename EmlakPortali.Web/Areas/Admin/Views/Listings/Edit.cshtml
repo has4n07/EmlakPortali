@@ -1,0 +1,243 @@
+@{
+    ViewData["Title"] = "İlanı Düzenle";
+    var listingId = ViewBag.ListingId;
+}
+
+<div class="container">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-0">İlanı Düzenle (#@listingId)</h3>
+            <div class="text-muted">Mevcut ilan bilgilerini güncelleyin</div>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Listings" asp-action="Index">Geri Dön</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="alert alert-danger d-none" id="errBox"></div>
+            <div class="alert alert-success d-none" id="successBox">İlan başarıyla güncellendi!</div>
+
+            <form id="frmEdit">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Başlık *</label>
+                        <input type="text" class="form-control" id="title" required maxlength="200" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fiyat *</label>
+                        <input type="number" class="form-control" id="price" required min="1" step="0.01" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">İlan Türü *</label>
+                        <select class="form-select" id="listingType" required>
+                            <option value="1">Satılık</option>
+                            <option value="2">Kiralık</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Kategori *</label>
+                        <select class="form-select" id="categoryId" required>
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">İl *</label>
+                        <select class="form-select" id="cityId" required>
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">İlçe *</label>
+                        <select class="form-select" id="districtId" required>
+                            <option value="">Önce il seçin</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Oda Sayısı</label>
+                        <input type="number" class="form-control" id="roomCount" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Banyo Sayısı</label>
+                        <input type="number" class="form-control" id="bathCount" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Bulunduğu Kat</label>
+                        <input type="number" class="form-control" id="floor" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Toplam Kat</label>
+                        <input type="number" class="form-control" id="totalFloors" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Brüt m²</label>
+                        <input type="number" class="form-control" id="areaGrossM2" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Net m²</label>
+                        <input type="number" class="form-control" id="areaNetM2" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Adres Tarifi</label>
+                        <input type="text" class="form-control" id="addressLine" maxlength="500" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Yeni Kapak Fotoğrafı Yükle (Değiştirmek için)</label>
+                        <input type="file" class="form-control" id="coverImage" accept=".jpg,.jpeg,.png,.webp" />
+                        <small class="text-muted" id="currImageInfo"></small>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Açıklama *</label>
+                        <textarea class="form-control" id="description" rows="4" required></textarea>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <button type="submit" class="btn btn-primary px-4 py-2" id="btnSubmit">
+                            <i class="ph ph-check me-2"></i> Değişiklikleri Kaydet
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const LI_ID = parseInt("@listingId");
+        let existingCoverUrl = null;
+        let originalIsActive = true;
+
+        $(function () {
+            const api = window.AdminApi;
+            
+            async function loadDropdowns() {
+                const catRes = await api.get("/api/categories");
+                const cats = catRes?.data || catRes?.Data || [];
+                $("#categoryId").html('<option value="">Seçiniz...</option>' + cats.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(''));
+                
+                const citRes = await api.get("/api/lookups/cities");
+                const cits = citRes?.data || citRes?.Data || [];
+                $("#cityId").html('<option value="">Seçiniz...</option>' + cits.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(''));
+            }
+
+            async function loadDistricts(cityId) {
+                if (!cityId) {
+                    $("#districtId").html('<option value="">Önce il seçin</option>');
+                    return;
+                }
+                $("#districtId").html('<option value="">Yükleniyor...</option>');
+                const disRes = await api.get(`/api/lookups/cities/${cityId}/districts`);
+                const dis = disRes?.data || disRes?.Data || [];
+                $("#districtId").html('<option value="">Seçiniz...</option>' + dis.map(d => `<option value="${d.id ?? d.Id}">${d.name ?? d.Name}</option>`).join(''));
+            }
+
+            $("#cityId").on("change", async function() {
+                await loadDistricts($(this).val());
+            });
+
+            async function loadData() {
+                try {
+                    // 1. Dropdown'ları yükle
+                    await loadDropdowns();
+                    
+                    // 2. İlan verisini admin endpoint'inden çek
+                    const res = await api.get(`/api/admin/listings/${LI_ID}`);
+                    const data = res?.data || res?.Data;
+                    if (!data) throw new Error("İlan verisi bulunamadı.");
+
+                    // 3. Form alanlarını doldur
+                    $("#title").val(data.title ?? data.Title ?? "");
+                    $("#price").val(data.price ?? data.Price ?? "");
+                    $("#listingType").val(data.listingType ?? data.ListingType ?? "");
+                    $("#categoryId").val(data.categoryId ?? data.CategoryId ?? "");
+                    $("#roomCount").val(data.roomCount ?? data.RoomCount ?? "");
+                    $("#bathCount").val(data.bathCount ?? data.BathCount ?? "");
+                    $("#floor").val(data.floor ?? data.Floor ?? "");
+                    $("#totalFloors").val(data.totalFloors ?? data.TotalFloors ?? "");
+                    $("#areaGrossM2").val(data.areaGrossM2 ?? data.AreaGrossM2 ?? "");
+                    $("#areaNetM2").val(data.areaNetM2 ?? data.AreaNetM2 ?? "");
+                    $("#addressLine").val(data.addressLine ?? data.AddressLine ?? "");
+                    $("#description").val(data.description ?? data.Description ?? "");
+                    
+                    originalIsActive = data.isActive ?? data.IsActive ?? true;
+                    existingCoverUrl = data.coverImageUrl ?? data.CoverImageUrl ?? null;
+                    
+                    if (existingCoverUrl) {
+                        $("#currImageInfo").html(`Mevcut: <a href="${existingCoverUrl}" target="_blank">Görüntüle</a>`);
+                    }
+
+                    // 4. Şehir seç ve ilçeleri yükle
+                    const cid = data.cityId ?? data.CityId;
+                    const did = data.districtId ?? data.DistrictId;
+                    
+                    if (cid) {
+                        $("#cityId").val(cid);
+                        await loadDistricts(cid);
+                        if (did) {
+                            $("#districtId").val(did);
+                        }
+                    }
+                } catch(e) {
+                    $("#errBox").removeClass("d-none").text("Hata: " + (e?.message || "Veri çekilemedi."));
+                }
+            }
+
+            $("#frmEdit").on("submit", async function (e) {
+                e.preventDefault();
+                $("#errBox, #successBox").addClass("d-none");
+                $("#btnSubmit").prop("disabled", true).html('<span class="spinner-border spinner-border-sm me-2"></span> Yükleniyor...');
+                
+                function getInt(id) { const v = $("#"+id).val(); return v ? parseInt(v, 10) : null; }
+                function getDec(id) { const v = $("#"+id).val(); return v ? parseFloat(v) : null; }
+
+                const payload = {
+                    title: $("#title").val(),
+                    price: getDec("price"),
+                    listingType: getInt("listingType"),
+                    categoryId: getInt("categoryId"),
+                    cityId: getInt("cityId"),
+                    districtId: getInt("districtId"),
+                    roomCount: getInt("roomCount"),
+                    bathCount: getInt("bathCount"),
+                    floor: getInt("floor"),
+                    totalFloors: getInt("totalFloors"),
+                    areaGrossM2: getInt("areaGrossM2"),
+                    areaNetM2: getInt("areaNetM2"),
+                    addressLine: $("#addressLine").val() || null,
+                    description: $("#description").val(),
+                    coverImageUrl: existingCoverUrl,
+                    isActive: originalIsActive
+                };
+
+                try {
+                    const coverFileInput = $("#coverImage")[0];
+                    if (coverFileInput && coverFileInput.files && coverFileInput.files.length > 0) {
+                        const file = coverFileInput.files[0];
+                        const uploadRes = await api.upload("/api/listings/upload-image", file);
+                        if (uploadRes?.data?.url || uploadRes?.Data?.Url) {
+                            payload.coverImageUrl = uploadRes.data?.url || uploadRes.Data?.Url;
+                            existingCoverUrl = payload.coverImageUrl;
+                            $("#currImageInfo").html(`Mevcut: <a href="${existingCoverUrl}" target="_blank">Görüntüle</a>`);
+                        }
+                    }
+
+                    await api.put(`/api/listings/${LI_ID}`, payload);
+                    $("#successBox").removeClass("d-none");
+                    window.scrollTo(0,0);
+                } catch (err) {
+                    $("#errBox").removeClass("d-none").text(err?.message || "İlan güncellenirken hata oluştu.");
+                } finally {
+                    $("#btnSubmit").prop("disabled", false).html('<i class="ph ph-check me-2"></i> Değişiklikleri Kaydet');
+                }
+            });
+
+            loadData();
+        });
+    </script>
+}

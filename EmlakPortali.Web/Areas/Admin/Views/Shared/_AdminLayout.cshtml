@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin | Emlak Portali</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Phosphor Icons for premium icons -->
+    <script src="https://unpkg.com/@@phosphor-icons/web"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+</head>
+<body class="sb-admin">
+    <div class="d-flex w-100">
+        <!-- Sidebar -->
+        <div id="sidebar-wrapper">
+            <div class="sidebar-heading px-4 py-4 d-flex align-items-center">
+                <div class="brand-icon text-white rounded"><i class="ph-bold ph-buildings"></i></div>
+                <span class="ms-2 fs-5 fw-bold text-white tracking-wide">Emlak Portalı</span>
+            </div>
+            <div class="list-group list-group-flush mt-2 px-2">
+                <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index"
+                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                    <i class="ph ph-squares-four"></i> <span>Dashboard</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Listings" asp-action="Index"
+                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                    <i class="ph ph-list-dashes"></i> <span>İlan Yönetimi</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Listings" asp-action="Create"
+                   class="list-group-item rounded mb-1 ms-3 d-flex align-items-center text-muted small">
+                    <i class="ph ph-plus-circle"></i> <span>Yeni İlan Ekle</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Categories" asp-action="Index"
+                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                    <i class="ph ph-folder-open"></i> <span>Kategoriler</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Users" asp-action="Index"
+                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                    <i class="ph ph-users"></i> <span>Kullanıcılar</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Roles" asp-action="Index"
+                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                    <i class="ph ph-shield-check"></i> <span>Roller ve Yetkiler</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Page content wrapper -->
+        <div id="page-content-wrapper" class="d-flex flex-column w-100">
+            <!-- Topbar -->
+            <nav class="sb-topnav navbar navbar-expand px-4 py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-link btn-sm d-lg-none me-3" id="sidebarToggle" type="button">
+                        <i class="ph ph-list fs-3"></i>
+                    </button>
+                    <div class="d-none d-lg-block">
+                        <span class="fs-5 fw-semibold text-main" id="adminWelcome">Yükleniyor...</span>
+                    </div>
+                </div>
+
+                <ul class="navbar-nav align-items-center mb-0">
+                    <li class="nav-item me-3">
+                        <a class="nav-link btn btn-light btn-sm rounded-pill px-3 fw-medium d-flex align-items-center gap-2" asp-area="Admin" asp-controller="Profile" asp-action="Index">
+                            <i class="ph ph-user-circle fs-5"></i> Profilim
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-primary btn-sm rounded-pill px-4 fw-medium shadow-sm transition-all" type="button" id="btnAdminLogout">
+                            Güvenli Çıkış
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Main content -->
+            <main class="flex-grow-1 p-4 p-md-5">
+                @RenderBody()
+            </main>
+
+            <footer class="mt-auto py-4 px-5 text-center text-muted small border-top">
+                &copy; @DateTime.Now.Year - Emlak Portalı Admin Tasarımı by HASAN ESMER
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/admin/admin-api.js" asp-append-version="true"></script>
+    <script src="~/js/admin/admin-auth.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            // Sidebar Toggle
+            $("#sidebarToggle").on("click", function (e) {
+                e.preventDefault();
+                $("#sidebar-wrapper").toggleClass("show");
+            });
+
+            // Set Active Menu Item based on URL path
+            const currentPath = window.location.pathname.toLowerCase();
+            $(".list-group-item").each(function () {
+                const href = $(this).attr("href")?.toLowerCase();
+                if (href && currentPath.includes(href) && href !== "/admin") {
+                    $(this).addClass("active");
+                } else if (href === "/admin" && (currentPath === "/admin" || currentPath === "/admin/dashboard")) {
+                    $(this).addClass("active");
+                }
+            });
+
+            // Load Welcome Section
+            async function loadWelcome() {
+                const span = $("#adminWelcome");
+                const cached = window.AdminAuth?.getUserInfo?.();
+                if (cached?.fullName || cached?.FullName) {
+                    span.text(`Merhaba, ${cached.fullName ?? cached.FullName} 👋`);
+                    return;
+                }
+
+                const token = window.AdminAuth?.getToken?.();
+                if (!token) {
+                    span.text("Yönetim Paneline Hoş Geldiniz");
+                    return;
+                }
+
+                try {
+                    const me = await window.AdminApi.get("/api/auth/me");
+                    const u = me?.data || me?.Data;
+                    if (u) {
+                        window.AdminAuth?.setUserInfo?.(u);
+                        span.text(`Merhaba, ${u.fullName ?? u.FullName ?? u.email ?? u.Email} 👋`);
+                    } else {
+                        span.text("Yönetim Paneline Hoş Geldiniz");
+                    }
+                } catch {
+                    span.text("Yönetim Paneline Hoş Geldiniz");
+                }
+            }
+
+            loadWelcome();
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

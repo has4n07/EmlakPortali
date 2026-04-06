@@ -1,0 +1,60 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Admin Giriş";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Giriş | Emlak Portali</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card shadow-sm mt-5">
+                    <div class="card-body p-4">
+                        <h4 class="mb-1">Admin Giriş</h4>
+                        <div class="text-muted mb-3">JWT ile API üzerinden</div>
+
+                        <div class="alert alert-danger d-none" id="loginErr"></div>
+                        <div class="mb-3">
+                            <label class="form-label">E-posta</label>
+                            <input class="form-control" id="email" value="admin@emlak.local" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Şifre</label>
+                            <input class="form-control" id="password" type="password" value="Admin123*" />
+                        </div>
+                        <div class="d-grid">
+                            <button class="btn btn-primary" id="btnLogin" type="button">Giriş Yap</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/admin/admin-api.js" asp-append-version="true"></script>
+    <script src="~/js/admin/admin-auth.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            $("#btnLogin").on("click", async function () {
+                $("#loginErr").addClass("d-none").text("");
+                try {
+                    await AdminAuth.login($("#email").val(), $("#password").val());
+                    window.location.href = "/Admin";
+                } catch (e) {
+                    $("#loginErr").removeClass("d-none").text(e?.message ?? String(e));
+                }
+                        });
+        });
+    </script>
+</body>
+</html>
+

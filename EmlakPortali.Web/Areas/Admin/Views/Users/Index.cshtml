@@ -1,0 +1,97 @@
+@{
+    ViewData["Title"] = "Kullanıcılar";
+}
+
+<div class="container">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h3 class="mb-0">Kullanıcı Yönetimi</h3>
+            <div class="text-muted">Aktif/Pasif</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+        </div>
+    </div>
+
+    <div class="alert alert-danger d-none" id="errBox"></div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>E-posta</th>
+                            <th>Ad Soyad</th>
+                            <th style="width:180px;">Kayıt</th>
+                            <th style="width:100px;">Aktif</th>
+                            <th style="width:200px;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rows">
+                        <tr><td colspan="5" class="text-muted p-4">Yükleniyor...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            function setErr(msg) {
+                if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+                $("#errBox").removeClass("d-none").text(msg);
+            }
+
+            async function load() {
+                setErr(null);
+                const res = await AdminApi.get("/api/admin/users");
+                const users = res?.data || res?.Data || [];
+
+                if (!users.length) {
+                    $("#rows").html(`<tr><td colspan="5" class="text-muted p-4">Kayıt yok.</td></tr>`);
+                    return;
+                }
+
+                const html = users.map(u => {
+                    const id = u.id ?? u.Id;
+                    const email = u.email ?? u.Email;
+                    const fullName = u.fullName ?? u.FullName ?? "";
+                    const created = u.createdAtUtc ?? u.CreatedAtUtc;
+                    const isActive = u.isActive ?? u.IsActive;
+                    const badge = isActive ? `<span class="badge bg-success">Aktif</span>` : `<span class="badge bg-secondary">Pasif</span>`;
+                    const btn = isActive
+                        ? `<button class="btn btn-sm btn-warning" data-active="false" data-id="${id}">Pasif Yap</button>`
+                        : `<button class="btn btn-sm btn-success" data-active="true" data-id="${id}">Aktif Yap</button>`;
+                    return `<tr>
+                        <td class="fw-semibold">${email}</td>
+                        <td>${fullName}</td>
+                        <td class="text-muted small">${created}</td>
+                        <td>${badge}</td>
+                        <td>${btn}</td>
+                    </tr>`;
+                }).join("");
+
+                $("#rows").html(html);
+            }
+
+            $("#rows").on("click", "button[data-active]", async function () {
+                setErr(null);
+                const id = $(this).data("id");
+                const isActive = $(this).data("active");
+                try {
+                    await AdminApi.put(`/api/admin/users/${id}/active?isActive=${isActive}`);
+                    await load();
+                } catch (e) { setErr(e?.message ?? String(e)); }
+            });
+
+            (async function init() {
+                try { await load(); }
+                catch (e) { setErr(e?.message ?? "Token yoksa önce giriş yap."); }
+            })();
+        });
+    </script>
+}
+

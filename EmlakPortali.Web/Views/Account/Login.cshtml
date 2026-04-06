@@ -1,0 +1,50 @@
+﻿@{
+    ViewData["Title"] = "Giriş Yap";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card shadow-sm mt-5">
+                <div class="card-body p-4">
+                    <h4 class="mb-1">Giriş Yap</h4>
+                    <div class="text-muted mb-3">Hesabına giriş yaparak ilanlarını yönet.</div>
+
+                    <div class="alert alert-danger d-none" id="loginErr"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label">E-posta</label>
+                        <input class="form-control" id="email" type="email" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Şifre</label>
+                        <input class="form-control" id="password" type="password" />
+                    </div>
+                    <div class="d-grid mb-2">
+                        <button class="btn btn-primary" id="btnLogin" type="button">Giriş Yap</button>
+                    </div>
+                    <div class="small text-muted">
+                        Hesabın yok mu?
+                        <a asp-controller="Account" asp-action="Register">Kayıt ol</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            $("#btnLogin").on("click", async function () {
+                $("#loginErr").addClass("d-none").text("");
+                try {
+                    await UserAuth.login($("#email").val(), $("#password").val());
+                    window.location.href = "/Account/Me";
+                } catch (e) {
+                    $("#loginErr").removeClass("d-none").text(e?.message ?? String(e));
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,266 @@
+@{
+    ViewData["Title"] = "Kategoriler";
+}
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="fw-bold mb-1 text-gradient">Kategori Yönetimi</h3>
+            <div class="text-muted small">İlan kategorilerini ekleyin, silin ve yönetin</div>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary shadow-sm" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+            <i class="ph ph-house"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sol Kolon: Yeni Kategori -->
+        <div class="col-lg-4">
+            <div class="card shadow-md border-0 h-auto">
+                <div class="card-header bg-transparent border-bottom-0 pb-0 pt-4">
+                    <h5 class="fw-bold mb-0"><i class="ph ph-folder-plus text-primary me-2"></i> Yeni Ekle</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-none py-2" id="errBox"></div>
+                    <div class="alert alert-success d-none py-2" id="okBox"></div>
+                    <form onsubmit="return false;" class="mb-2">
+                        <label class="form-label text-muted small fw-semibold">Kategori Adı</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="ph ph-tag"></i></span>
+                            <input class="form-control border-start-0 ps-0" id="catName" placeholder="Örn: Müstakil Ev, Ofis" autocomplete="off" />
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3 shadow-sm" id="btnAdd" type="button">
+                            <i class="ph ph-plus-circle me-1"></i> Kategoriyi Kaydet
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ Kolon: Liste -->
+        <div class="col-lg-8">
+            <div class="card shadow-md border-0 h-100">
+                <div class="card-header bg-transparent border-bottom px-4 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Tüm Kategoriler</h5>
+                    <button class="btn btn-sm btn-light border text-muted" onclick="loadCategories()"><i class="ph ph-arrows-clockwise"></i> Yenile</button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4" style="width:80px;">ID</th>
+                                    <th>Kategori Adı</th>
+                                    <th style="width:110px;">İlan Sayısı</th>
+                                    <th style="width:90px;">Durum</th>
+                                    <th class="text-end pe-4">İşlemler</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rows">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted p-5">
+                                        <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                        <div>Kategoriler yükleniyor...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Düzenleme Modalı -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="ph ph-pencil-simple me-2"></i>Kategoriyi Düzenle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none" id="modalErrBox"></div>
+                <input type="hidden" id="editCatId" />
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-semibold">Kategori Adı</label>
+                    <input type="text" class="form-control" id="editCatName" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" id="btnSaveEdit">
+                    <i class="ph ph-check me-1"></i> Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function setErr(msg) {
+        if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+        $("#errBox").removeClass("d-none").text(msg);
+    }
+    function setOk(msg) {
+        if (!msg) { $("#okBox").addClass("d-none").text(""); return; }
+        $("#okBox").removeClass("d-none").text(msg);
+    }
+
+    async function loadCategories() {
+        try {
+            const res = await AdminApi.get("/api/categories/admin");
+            const data = res?.data || res?.Data || [];
+
+            if (!data.length) {
+                $("#rows").html(`<tr><td colspan="5" class="text-center text-muted p-5"><i class="ph ph-folder fs-2 mb-2"></i><br/>Hiç kategori bulunmuyor.</td></tr>`);
+                return;
+            }
+
+            const html = data.map(x => {
+                const id = x.id ?? x.Id;
+                const name = x.name ?? x.Name;
+                const isActive = x.isActive ?? x.IsActive;
+                const listCount = x.listingCount ?? x.ListingCount ?? 0;
+
+                const activeBadge = isActive
+                    ? `<span class="badge bg-primary px-2 py-1"><i class="ph ph-eye"></i> Aktif</span>`
+                    : `<span class="badge bg-secondary px-2 py-1"><i class="ph ph-eye-slash"></i> Pasif</span>`;
+
+                const toggleBtnIcon = isActive ? `<i class="ph ph-eye-slash"></i> Pasif Yap` : `<i class="ph ph-eye"></i> Aktif Yap`;
+                const toggleBtnClass = isActive ? `btn-warning` : `btn-success`;
+
+                const deleteBtn = listCount > 0
+                    ? `<button class="btn btn-sm btn-secondary shadow-sm" disabled title="İlan olduğu için silinemez"><i class="ph ph-lock-simple"></i> Kilitli</button>`
+                    : `<button class="btn btn-sm btn-danger shadow-sm" onclick="deleteCategory(${id})"><i class="ph ph-trash"></i> Kaldır</button>`;
+
+                return `
+                <tr>
+                    <td class="ps-4 text-muted font-monospace small">#${id}</td>
+                    <td class="fw-semibold"><i class="ph ph-folder-notch text-warning me-2"></i><span id="cat_name_${id}">${name}</span></td>
+                    <td><span class="badge bg-info text-dark">${listCount} ilan</span></td>
+                    <td>${activeBadge}</td>
+                    <td class="text-end pe-4">
+                        <div class="d-flex flex-nowrap gap-1 justify-content-end">
+                            <a href="/Admin/Listings?categoryId=${id}" class="btn btn-sm btn-light border shadow-sm" title="İlanları Listele">
+                                <i class="ph ph-list-dashes"></i> İlanlar
+                            </a>
+                            <button class="btn btn-sm ${toggleBtnClass} text-white shadow-sm" onclick="toggleCategory(${id}, ${!isActive})">
+                                ${toggleBtnIcon}
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary shadow-sm" onclick="editCategory(${id})">
+                                <i class="ph ph-pencil-simple"></i> Düzenle
+                            </button>
+                            ${deleteBtn}
+                        </div>
+                    </td>
+                </tr>`;
+            }).join("");
+
+            $("#rows").html(html);
+        } catch (e) {
+            $("#rows").html(`<tr><td colspan="5" class="text-center text-danger p-5">Hata: ${e?.message || "Yüklenemedi"}</td></tr>`);
+        }
+    }
+
+    // ───── Edit (Modal) ──────────────────────────────────────────────────────
+    let editModalInst;
+
+    function editCategory(id) {
+        const currentName = $(`#cat_name_${id}`).text().trim();
+        $("#editCatId").val(id);
+        $("#editCatName").val(currentName);
+        $("#modalErrBox").addClass("d-none").text("");
+
+        if (!editModalInst) {
+            editModalInst = new bootstrap.Modal(document.getElementById("editModal"));
+        }
+        editModalInst.show();
+    }
+
+    // ───── Toggle Active ─────────────────────────────────────────────────────
+    async function toggleCategory(id, status) {
+        setErr(null); setOk(null);
+        try {
+            await AdminApi.put(`/api/categories/${id}/active?isActive=${status}`, {});
+            setOk("Kategori durumu güncellendi!");
+            await loadCategories();
+        } catch (e) {
+            setErr(e?.message ?? "Güncelleme sırasında hata oluştu.");
+        }
+    }
+
+    // ───── Delete ────────────────────────────────────────────────────────────
+    async function deleteCategory(id) {
+        if (!confirm("Bu kategoriyi silmek istediğinize emin misiniz?")) return;
+        setErr(null); setOk(null);
+        try {
+            await AdminApi.delete(`/api/categories/${id}`);
+            setOk("Kategori başarıyla silindi!");
+            await loadCategories();
+        } catch (e) {
+            setErr(e?.message ?? "Silme sırasında hata oluştu.");
+        }
+    }
+
+    $(function () {
+
+        // ── Modal: Kaydet butonu ─────────────────────────────────────────────
+        $("#btnSaveEdit").on("click", async function () {
+            const id = $("#editCatId").val();
+            const newName = $("#editCatName").val().trim();
+            const currentName = $(`#cat_name_${id}`).text().trim();
+
+            if (!newName) {
+                $("#modalErrBox").removeClass("d-none").text("Kategori adı boş olamaz.");
+                return;
+            }
+            if (newName === currentName) {
+                editModalInst.hide();
+                return;
+            }
+
+            const btn = $(this);
+            const og = btn.html();
+            btn.prop("disabled", true).html('<i class="ph ph-spinner-gap ph-spin me-1"></i> Kaydediliyor...');
+
+            try {
+                await AdminApi.put(`/api/categories/${id}`, { name: newName });
+                editModalInst.hide();
+                setOk("Kategori başarıyla güncellendi!");
+                await loadCategories();
+            } catch (e) {
+                $("#modalErrBox").removeClass("d-none").text(e?.message ?? "Hata oluştu.");
+            } finally {
+                btn.prop("disabled", false).html(og);
+            }
+        });
+
+        // ── Yeni Kategori Ekle ───────────────────────────────────────────────
+        $("#btnAdd").on("click", async function () {
+            setErr(null); setOk(null);
+            const name = $("#catName").val().trim();
+            if (!name) { setErr("Lütfen bir kategori adı girin."); return; }
+
+            const btn = $(this);
+            const og = btn.html();
+            btn.prop("disabled", true).html('<i class="ph ph-spinner-gap ph-spin me-1"></i> Ekleniyor...');
+
+            try {
+                await AdminApi.post("/api/categories", { name });
+                $("#catName").val("");
+                setOk("Kategori başarıyla oluşturuldu.");
+                await loadCategories();
+            } catch (e) {
+                setErr(e?.message ?? String(e));
+            } finally {
+                btn.prop("disabled", false).html(og);
+            }
+        });
+
+        loadCategories();
+    });
+</script>
+}
