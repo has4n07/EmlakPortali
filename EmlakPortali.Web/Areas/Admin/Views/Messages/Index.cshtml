@@ -1,0 +1,184 @@
+@{
+    ViewData["Title"] = "Mesajlaşma";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 mb-0 text-gray-800">Mesajlaşma</h2>
+        <p class="text-muted small mb-0">Sohbetler anlık olarak yenilenir.</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="glass-panel p-3 h-100">
+            <h6 class="mb-3">Sohbetler</h6>
+            <div id="conversationList" class="list-group">
+                <div class="list-group-item text-muted">Yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="glass-panel p-3 d-flex flex-column" style="min-height: 520px;">
+            <div class="border-bottom pb-2 mb-3">
+                <div class="fw-semibold" id="threadTitle">Bir sohbet seçin</div>
+                <div class="small text-muted" id="threadMeta"></div>
+            </div>
+            <div id="threadMessages" class="flex-grow-1 overflow-auto mb-3 d-flex flex-column gap-2" style="max-height: 420px;">
+                <div class="text-muted small">Mesajları görmek için soldan bir sohbet seçin.</div>
+            </div>
+            <div class="input-group">
+                <input type="text" id="replyText" class="form-control" placeholder="Mesaj yazın..." />
+                <button class="btn btn-futuristic" id="btnSendReply" type="button">Gönder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            let conversations = [];
+            let selected = null;
+            let pollHandle = null;
+
+            async function loadConversations() {
+                const res = await AdminApi.get("/api/contactmessages/conversations");
+                conversations = res?.data || res?.Data || [];
+                renderConversations();
+            }
+
+            function renderConversations() {
+                if (!conversations.length) {
+                    $("#conversationList").html('<div class="list-group-item text-muted">Henüz sohbet yok.</div>');
+                    return;
+                }
+
+                const html = conversations.map(x => {
+                    const listingId = x.listingId ?? x.ListingId;
+                    const listingTitle = x.listingTitle ?? x.ListingTitle ?? "-";
+                    const counterpartEmail = x.counterpartEmail ?? x.CounterpartEmail;
+                    const counterpartName = x.counterpartName ?? x.CounterpartName ?? counterpartEmail;
+                    const unread = x.unreadCount ?? x.UnreadCount ?? 0;
+                    const active = selected && selected.listingId === listingId && selected.counterpartEmail === counterpartEmail;
+                    return `<button type="button" class="list-group-item list-group-item-action text-start ${active ? "active" : ""}" data-listing-id="${listingId}" data-counterpart-email="${counterpartEmail}">
+                        <div class="d-flex justify-content-between">
+                            <div class="fw-semibold">${counterpartName}</div>
+                            ${unread > 0 ? `<span class="badge bg-danger rounded-pill">${unread}</span>` : ""}
+                        </div>
+                        <div class="small">${listingTitle}</div>
+                    </button>`;
+                }).join("");
+
+                $("#conversationList").html(html);
+            }
+
+            async function loadThread() {
+                if (!selected) return;
+                const qs = new URLSearchParams({
+                    listingId: selected.listingId,
+                    counterpartEmail: selected.counterpartEmail
+                });
+                const res = await AdminApi.get("/api/contactmessages/thread?" + qs.toString());
+                const items = res?.data || res?.Data || [];
+
+                $("#threadTitle").text(selected.counterpartName || selected.counterpartEmail);
+                $("#threadMeta").text(`İlan #${selected.listingId}`);
+
+                if (!items.length) {
+                    $("#threadMessages").html('<div class="text-muted small">Henüz mesaj yok.</div>');
+                    return;
+                }
+
+                const html = items.map(m => {
+                    const mine = m.isMine ?? m.IsMine;
+                    const msg = m.message ?? m.Message;
+                    const at = new Date(m.created ?? m.Created).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+                    return `<div class="d-flex ${mine ? "justify-content-end" : "justify-content-start"}">
+                        <div class="p-2 rounded ${mine ? "bg-primary text-white" : "bg-light"}" style="max-width: 75%;">
+                            <div>${msg}</div>
+                            <div class="small ${mine ? "text-white-50" : "text-muted"} text-end">${at}</div>
+                        </div>
+                    </div>`;
+                }).join("");
+
+                $("#threadMessages").html(html);
+                const thread = document.getElementById("threadMessages");
+                thread.scrollTop = thread.scrollHeight;
+            }
+
+            async function refresh() {
+                try {
+                    await loadConversations();
+                    if (selected) {
+                        const refreshed = conversations.find(x =>
+                            (x.listingId ?? x.ListingId) === selected.listingId &&
+                            (x.counterpartEmail ?? x.CounterpartEmail) === selected.counterpartEmail);
+                        if (!refreshed) {
+                            selected = null;
+                            $("#threadMessages").html('<div class="text-muted small">Mesajları görmek için soldan bir sohbet seçin.</div>');
+                        } else {
+                            selected.counterpartName = refreshed.counterpartName ?? refreshed.CounterpartName;
+                            await loadThread();
+                        }
+                    }
+                } catch (e) {
+                    AppNotify.error(e?.message ?? String(e));
+                }
+            }
+
+            $("#conversationList").on("click", "button[data-listing-id]", async function () {
+                const listingId = Number($(this).data("listingId"));
+                const counterpartEmail = ($(this).data("counterpartEmail") || "").toString();
+                const conv = conversations.find(x =>
+                    (x.listingId ?? x.ListingId) === listingId &&
+                    (x.counterpartEmail ?? x.CounterpartEmail) === counterpartEmail);
+                selected = {
+                    listingId,
+                    counterpartEmail,
+                    counterpartName: conv?.counterpartName ?? conv?.CounterpartName ?? counterpartEmail
+                };
+                renderConversations();
+                await loadThread();
+            });
+
+            $("#btnSendReply").on("click", async function () {
+                if (!selected) {
+                    AppNotify.warning("Önce bir sohbet seçin.");
+                    return;
+                }
+                const message = ($("#replyText").val() || "").toString().trim();
+                if (!message) return;
+
+                const btn = $(this);
+                btn.prop("disabled", true);
+                try {
+                    await AdminApi.post("/api/contactmessages/reply", {
+                        listingId: selected.listingId,
+                        receiverEmail: selected.counterpartEmail,
+                        message
+                    });
+                    $("#replyText").val("");
+                    await refresh();
+                } catch (e) {
+                    AppNotify.error(e?.message ?? String(e));
+                } finally {
+                    btn.prop("disabled", false);
+                }
+            });
+
+            $("#replyText").on("keydown", function (e) {
+                if (e.key === "Enter") $("#btnSendReply").trigger("click");
+            });
+
+            (async function init() {
+                await refresh();
+                pollHandle = setInterval(refresh, 4000);
+            })();
+
+            $(window).on("beforeunload", function () {
+                if (pollHandle) clearInterval(pollHandle);
+            });
+        });
+    </script>
+}

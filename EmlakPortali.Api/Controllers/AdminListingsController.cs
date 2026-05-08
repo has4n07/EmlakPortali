@@ -3,10 +3,11 @@ using EmlakPortali.Api.Dtos;
 using EmlakPortali.Api.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EmlakPortali.Api.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,Realtor")]
 [Route("api/admin/listings")]
 [ApiController]
 public class AdminListingsController : ControllerBase
@@ -21,7 +22,15 @@ public class AdminListingsController : ControllerBase
     [HttpGet]
     public async Task<DataResult<object>> Search([FromQuery] ListingSearchQueryDto q, [FromQuery] bool? approved = null, [FromQuery] bool? isActive = null)
     {
-        var data = await _listingRepository.SearchAdminAsync(q, approved, isActive);
+        var isAdmin = User.IsInRole("Admin");
+        var userIdStr = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        Guid? ownerUserId = null;
+        if (!isAdmin && Guid.TryParse(userIdStr, out var userId))
+        {
+            ownerUserId = userId;
+        }
+
+        var data = await _listingRepository.SearchAdminAsync(q, approved, isActive, ownerUserId);
         return new DataResult<object> { Status = true, Message = "OK", Data = data };
     }
 
@@ -33,9 +42,26 @@ public class AdminListingsController : ControllerBase
         {
             return new DataResult<object> { Status = false, Message = "İlan bulunamadı." };
         }
+        
+        var isAdmin = User.IsInRole("Admin");
+        var userIdStr = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (!isAdmin && Guid.TryParse(userIdStr, out var userId))
+        {
+            var props = data.GetType().GetProperty("OwnerUserId");
+            if (props != null)
+            {
+                var ownerUserId = (Guid)props.GetValue(data)!;
+                if (ownerUserId != userId)
+                {
+                    return new DataResult<object> { Status = false, Message = "Bu ilanı görme yetkiniz yok." };
+                }
+            }
+        }
+
         return new DataResult<object> { Status = true, Message = "OK", Data = data };
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:int}/approve")]
     public async Task<Result> Approve(int id, [FromQuery] bool approved = true)
     {
@@ -56,6 +82,16 @@ public class AdminListingsController : ControllerBase
         if (entity is null)
         {
             return new Result { Status = false, Message = "İlan bulunamadı." };
+        }
+
+        var isAdmin = User.IsInRole("Admin");
+        var userIdStr = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (!isAdmin && Guid.TryParse(userIdStr, out var userId))
+        {
+            if (entity.OwnerUserId != userId)
+            {
+                return new Result { Status = false, Message = "Bu ilanı düzenleme yetkiniz yok." };
+            }
         }
 
         await _listingRepository.SetActiveAsync(entity, isActive);

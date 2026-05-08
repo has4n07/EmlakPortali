@@ -1,0 +1,69 @@
+﻿        // Seed News
+        if (!await db.News.AnyAsync())
+        {
+            db.News.AddRange(new[]
+            {
+                new News
+                {
+                    Title = "2026 Konut Fiyatları: Uzmanlar Ne Diyor?",
+                    Slug = "konut-fiyatlari-2026",
+                    Summary = "Turkiye genelinde konut fiyatları 2026 yılı ilk ceyreginde %12 artıs gosterdi.",
+                    Content = "<p>Turkiye genelinde konut fiyatları 2026 yılı ilk ceyreginde %12 artıs gosterdi.</p>",
+                    ImageUrl = "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=900&q=80",
+                    Category = "Piyasa",
+                    IsHot = true,
+                    ReadMinutes = 5,
+                    Created = DateTime.UtcNow
+                },
+                new News
+                {
+                    Title = "Istanbul'da Kira Artıslari Duraksıyor mu?",
+                    Slug = "kira-artislari-istanbul",
+                    Summary = "Istanbul'daki kira artıs hızı yavaslama sinyalleri vermekte.",
+                    Content = "<p>Istanbul'daki kira artıslari Nisan 2026 itibariyla yavaslama sinyalleri vermekte.</p>",
+                    ImageUrl = "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80",
+                    Category = "Kiralık",
+                    IsHot = false,
+                    ReadMinutes = 4,
+                    Created = DateTime.UtcNow.AddDays(-2)
+                }
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Seed Projects
+        if (!await db.Projects.AnyAsync())
+        {
+            db.Projects.AddRange(new[]
+            {
+                new Project
+                {
+                    Name = "Panorama Istanbul",
+                    Slug = "panorama-istanbul",
+                    City = "Istanbul / Beylikduzu",
+                    Description = "Panorama Istanbul, Beylikduzu'nun kalbinde yukselen modern yasam kompleksidir.",
+                    ImageUrl = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=900&q=80",
+                    TotalUnits = 450,
+                    DeliveryDate = "2026 Q3",
+                    MinPrice = 4500000,
+                    Status = "Satista",
+                    RoomTypes = "1+1, 2+1, 3+1, 4+1",
+                    Created = DateTime.UtcNow
+                },
+                new Project
+                {
+                    Name = "Capital Residence",
+                    Slug = "capital-residence",
+                    City = "Ankara / Cankaya",
+                    Description = "Capital Residence, Ankara'nin prestijli Cankaya ilcesinde sundigu modern mimari.",
+                    ImageUrl = "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80",
+                    TotalUnits = 280,
+                    DeliveryDate = "2025 Teslim",
+                    MinPrice = 2800000,
+                    Status = "On Satis",
+                    RoomTypes = "2+1, 3+1, 4+1",
+                    Created = DateTime.UtcNow.AddDays(-10)
+                }
+            });
+            await db.SaveChangesAsync();
+        }

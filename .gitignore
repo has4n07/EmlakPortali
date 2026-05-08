@@ -484,3 +484,5 @@ $RECYCLE.BIN/
 *.swp
 b u i l d _ e r r o r s . t x t  
  
+# User uploaded files
+EmlakPortali.Api/wwwroot/uploads/

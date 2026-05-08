@@ -2,6 +2,7 @@ using System.Security.Claims;
 using EmlakPortali.Api.Dtos;
 using EmlakPortali.Api.Models;
 using EmlakPortali.Api.Repositories;
+using EmlakPortali.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,11 +14,19 @@ public class ListingsController : ControllerBase
 {
     private readonly ListingRepository _listingRepository;
     private readonly IWebHostEnvironment _env;
+    private readonly ImageValidationService _imageValidation;
+    private readonly ILogger<ListingsController> _logger;
 
-    public ListingsController(ListingRepository listingRepository, IWebHostEnvironment env)
+    public ListingsController(
+        ListingRepository listingRepository, 
+        IWebHostEnvironment env,
+        ImageValidationService imageValidation,
+        ILogger<ListingsController> logger)
     {
         _listingRepository = listingRepository;
         _env = env;
+        _imageValidation = imageValidation;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -42,6 +51,8 @@ public class ListingsController : ControllerBase
         {
             return new DataResult<object> { Status = false, Message = "İlan bulunamadı." };
         }
+
+        await _listingRepository.IncrementViewCountAsync(id);
         return new DataResult<object> { Status = true, Message = "OK", Data = data };
     }
 
@@ -63,20 +74,45 @@ public class ListingsController : ControllerBase
     [HttpPost("upload-image")]
     public async Task<DataResult<object>> UploadImage(IFormFile file)
     {
+        // Step 1: Basic file validation
         if (file is null || file.Length == 0)
         {
-            return new DataResult<object> { Status = false, Message = "Geçersiz dosya." };
+            return new DataResult<object> { Status = false, Message = "Geçersiz dosya: Dosya boş veya yüklenemedi." };
         }
 
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        if (!allowed.Contains(ext))
+        // Step 2: File size validation
+        var sizeValidation = _imageValidation.ValidateFileSize(file);
+        if (!sizeValidation.IsValid)
         {
-            return new DataResult<object> { Status = false, Message = "Sadece .jpg, .jpeg, .webp veya .png dosyaları yüklenebilir." };
+            return new DataResult<object> { Status = false, Message = sizeValidation.ErrorMessage! };
         }
 
-        var fileName = $"{Guid.NewGuid()}{ext}";
+        // Step 3: Extension and MIME type validation
+        var mimeValidation = _imageValidation.ValidateMimeType(file);
+        if (!mimeValidation.IsValid)
+        {
+            return new DataResult<object> { Status = false, Message = mimeValidation.ErrorMessage! };
+        }
+
+        // Step 4: Magic byte validation (file signature)
+        var signatureValidation = _imageValidation.ValidateFileSignature(file);
+        if (!signatureValidation.IsValid)
+        {
+            return new DataResult<object> { Status = false, Message = signatureValidation.ErrorMessage! };
+        }
+
+        // Step 5: Image integrity validation
+        var integrityValidation = _imageValidation.ValidateImageIntegrity(file);
+        if (!integrityValidation.IsValid)
+        {
+            return new DataResult<object> { Status = false, Message = integrityValidation.ErrorMessage! };
+        }
+
+        // Step 6: Sanitize and save the image
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var fileName = $"{Guid.NewGuid()}{extension}";
         var folder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads");
+        
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
@@ -84,13 +120,38 @@ public class ListingsController : ControllerBase
 
         var path = Path.Combine(folder, fileName);
 
-        using (var stream = new FileStream(path, FileMode.Create))
+        try
         {
-            await file.CopyToAsync(stream);
-        }
+            // Re-encode/sanitize the image to remove potential malicious content
+            var sanitizationResult = await _imageValidation.SanitizeImageAsync(file, path);
+            
+            if (!sanitizationResult.IsSuccess)
+            {
+                _logger.LogWarning("Image sanitization failed for {FileName}: {Error}", file.FileName, sanitizationResult.ErrorMessage);
+                return new DataResult<object> { Status = false, Message = sanitizationResult.ErrorMessage! };
+            }
 
-        var relativeUrl = $"/uploads/{fileName}";
-        return new DataResult<object> { Status = true, Message = "OK", Data = new { Url = relativeUrl } };
+            var relativeUrl = $"/uploads/{fileName}";
+            var absoluteUrl = $"{Request.Scheme}://{Request.Host}{relativeUrl}";
+            return new DataResult<object> 
+            { 
+                Status = true, 
+                Message = "Görsel başarıyla yüklendi.", 
+                Data = new { Url = absoluteUrl, RelativeUrl = relativeUrl, Width = sanitizationResult.Width, Height = sanitizationResult.Height } 
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during image upload for {FileName}", file.FileName);
+            
+            // Clean up partial file
+            if (System.IO.File.Exists(path))
+            {
+                System.IO.File.Delete(path);
+            }
+            
+            return new DataResult<object> { Status = false, Message = "Görsel yüklenirken beklenmeyen bir hata oluştu." };
+        }
     }
 
     [Authorize]
@@ -101,6 +162,14 @@ public class ListingsController : ControllerBase
         if (!Guid.TryParse(userIdStr, out var userId))
         {
             return new DataResult<object> { Status = false, Message = "Token kullanıcı bilgisi okunamadı." };
+        }
+
+        var isRealtor = User.IsInRole("Realtor");
+        var isAdmin = User.IsInRole("Admin");
+
+        if (!isRealtor && !isAdmin)
+        {
+            return new DataResult<object> { Status = false, Message = "İlan ekleme yetkisi sadece emlakçı ve admin hesaplarındadır." };
         }
 
         var entity = await _listingRepository.CreateAsync(userId, dto);

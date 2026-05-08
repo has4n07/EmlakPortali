@@ -1,186 +1,224 @@
 ﻿@{
-    ViewData["Title"] = "İlanlar";
+    ViewData["Title"] = "Tüm İlanlar";
 }
 
-<div class="container">
-    <div class="row g-3 mb-3">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="mb-3">Filtreler</h6>
-                    <div class="mb-2">
-                        <label class="form-label small mb-1">Şehir</label>
-                        <select class="form-select" id="city"></select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small mb-1">İlçe</label>
-                        <select class="form-select" id="district"></select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label small mb-1">Tür</label>
-                        <select class="form-select" id="listingType">
-                            <option value="">Hepsi</option>
-                            <option value="1">Satılık</option>
-                            <option value="2">Kiralık</option>
-                        </select>
-                    </div>
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="form-label small mb-1">Min ₺</label>
-                            <input type="number" class="form-control" id="minPrice" />
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small mb-1">Max ₺</label>
-                            <input type="number" class="form-control" id="maxPrice" />
-                        </div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary btn-sm" id="btnSearch" type="button">Filtrele</button>
-                        <button class="btn btn-outline-secondary btn-sm" id="btnClear" type="button">Temizle</button>
-                    </div>
+<div class="row g-4 mb-5 animate-fade-in-up">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3">
+        <div class="glass-panel p-4 position-sticky" style="top: 100px;">
+            <h5 class="mb-4 text-white" style="font-family: 'Outfit', sans-serif;">
+                <i class="bi bi-funnel text-gradient"></i> Detaylı Arama
+            </h5>
+            
+            <div class="mb-3">
+                <label class="form-label small mb-1 text-muted">Şehir</label>
+                <select class="form-select" id="city"></select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small mb-1 text-muted">İlçe</label>
+                <select class="form-select" id="district"></select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small mb-1 text-muted">İlan Türü</label>
+                <select class="form-select" id="listingType">
+                    <option value="">Tümü</option>
+                    <option value="1">Satılık</option>
+                    <option value="2">Kiralık</option>
+                </select>
+            </div>
+            <div class="row g-2 mb-4">
+                <div class="col-6">
+                    <label class="form-label small mb-1 text-muted">Min (₺)</label>
+                    <input type="number" class="form-control" id="minPrice" placeholder="0" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-1 text-muted">Max (₺)</label>
+                    <input type="number" class="form-control" id="maxPrice" placeholder="Limit yok" />
                 </div>
             </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-futuristic py-2" id="btnSearch" type="button">Filtrele</button>
+                <button class="btn btn-outline-futuristic py-2" id="btnClear" type="button">Temizle</button>
+            </div>
         </div>
-        <div class="col-md-9">
-            <div id="errBox" class="alert alert-danger d-none"></div>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0">İlanlar</h5>
-                <div class="text-muted small" id="pagingInfo">-</div>
+    </div>
+    
+    <!-- Listings Grid -->
+    <div class="col-lg-9">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-0 text-white" style="font-family: 'Outfit', sans-serif;">Bulunan <span class="text-gradient">İlanlar</span></h3>
+            <div class="badge glass-panel px-3 py-2 text-cyan fs-6" id="pagingInfo" style="color: var(--accent-cyan); border-color: var(--accent-cyan);">-</div>
+        </div>
+        
+        <div id="errBox" class="alert alert-danger d-none glass-panel"></div>
+        
+        <div class="row g-4" id="rows">
+            <div class="col-12 text-center text-muted py-5 glass-panel">
+                <div class="spinner-border text-info" role="status"></div>
+                <div class="mt-2">İlanlar yükleniyor...</div>
             </div>
-            <div class="list-group mb-3" id="rows">
-                <div class="list-group-item text-muted">Yükleniyor...</div>
-            </div>
-            <div class="d-flex justify-content-end gap-2">
-                <button class="btn btn-outline-secondary btn-sm" id="prev">Önceki</button>
-                <button class="btn btn-outline-secondary btn-sm" id="next">Sonraki</button>
-            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center gap-3 mt-5">
+            <button class="btn btn-outline-futuristic px-4" id="prev" disabled>
+                &larr; Önceki
+            </button>
+            <button class="btn btn-futuristic px-4" id="next" disabled>
+                Sonraki &rarr;
+            </button>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-                const PublicApi = (function () {
-                    const baseUrl = "https://localhost:7293";
-                    async function get(url) {
-                        const res = await fetch(baseUrl + url);
-                        const text = await res.text();
-                        let json = null; try { json = text ? JSON.parse(text) : null; } catch { }
-                        if (!res.ok) throw new Error(json?.message || json?.Message || text || (res.status + " " + res.statusText));
-                        return json;
-                    }
-                    return { get };
-                })();
+        const PublicApi = (function () {
+            const baseUrl = "https://localhost:7293";
+            async function get(url) {
+                const res = await fetch(baseUrl + url);
+                const text = await res.text();
+                let json = null; try { json = text ? JSON.parse(text) : null; } catch { }
+                if (!res.ok) throw new Error(json?.message || json?.Message || text || (res.status + " " + res.statusText));
+                return json;
+            }
+            return { get };
+        })();
 
-                $(function () {
-                    let page = 1, total = 0, pageSize = 12;
+        $(function () {
+            let page = 1, total = 0, pageSize = 12;
 
-                    function setErr(msg) {
-                        if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
-                        $("#errBox").removeClass("d-none").text(msg);
-                    }
+            function setErr(msg) {
+                if (!msg) { $("#errBox").addClass("d-none").text(""); return; }
+                $("#errBox").removeClass("d-none").text(msg);
+            }
 
-                    async function loadCities() {
-                        const res = await PublicApi.get("/api/lookups/cities");
-                        const list = res?.data || res?.Data || [];
-                        $("#city").html('<option value="">Şehir</option>' +
-                            list.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(""));
-                    }
+            async function loadCities() {
+                const res = await PublicApi.get("/api/lookups/cities");
+                const list = res?.data || res?.Data || [];
+                $("#city").html('<option value="">Şehir Seçin</option>' +
+                    list.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(""));
+            }
 
-                    $("#city").on("change", async function () {
-                        const cityId = $(this).val();
-                        if (!cityId) { $("#district").html('<option value="">İlçe</option>'); return; }
-                        const res = await PublicApi.get(`/api/lookups/cities/${cityId}/districts`);
-                        const list = res?.data || res?.Data || [];
-                        $("#district").html('<option value="">İlçe</option>' +
-                            list.map(d => `<option value="${d.id ?? d.Id}">${d.name ?? d.Name}</option>`).join(""));
-                    });
+            $("#city").on("change", async function () {
+                const cityId = $(this).val();
+                if (!cityId) { $("#district").html('<option value="">İlçe Seçin</option>'); return; }
+                const res = await PublicApi.get(`/api/lookups/cities/${cityId}/districts`);
+                const list = res?.data || res?.Data || [];
+                $("#district").html('<option value="">İlçe Seçin</option>' +
+                    list.map(d => `<option value="${d.id ?? d.Id}">${d.name ?? d.Name}</option>`).join(""));
+            });
 
-                    function readFilters() {
-                        const url = new URLSearchParams(window.location.search);
-                        if (url.get("cityId")) $("#city").val(url.get("cityId")).trigger("change");
-                        if (url.get("listingType")) $("#listingType").val(url.get("listingType"));
-                        if (url.get("minPrice")) $("#minPrice").val(url.get("minPrice"));
-                        if (url.get("maxPrice")) $("#maxPrice").val(url.get("maxPrice"));
-                    }
+            function readFilters() {
+                const url = new URLSearchParams(window.location.search);
+                if (url.get("cityId")) $("#city").val(url.get("cityId")).trigger("change");
+                if (url.get("districtId")) {
+                    setTimeout(() => { $("#district").val(url.get("districtId")); }, 500);
+                }
+                if (url.get("listingType")) $("#listingType").val(url.get("listingType"));
+                if (url.get("minPrice")) $("#minPrice").val(url.get("minPrice"));
+                if (url.get("maxPrice")) $("#maxPrice").val(url.get("maxPrice"));
+            }
 
-                    async function load() {
-                        setErr(null);
-                        const qs = new URLSearchParams();
-                        qs.set("page", page);
-                        qs.set("pageSize", pageSize);
-                        qs.set("orderBy", 1);
+            async function load() {
+                setErr(null);
+                $("#rows").html('<div class="col-12 text-center text-muted py-5 glass-panel"><div class="spinner-border text-info" role="status"></div><div class="mt-2">Yükleniyor...</div></div>');
 
-                        const cityId = $("#city").val();
-                        const districtId = $("#district").val();
-                        const lt = $("#listingType").val();
-                        const min = $("#minPrice").val();
-                        const max = $("#maxPrice").val();
+                const qs = new URLSearchParams();
+                qs.set("page", page);
+                qs.set("pageSize", pageSize);
+                qs.set("orderBy", 1); // latest
 
-                        if (cityId) qs.set("cityId", cityId);
-                        if (districtId) qs.set("districtId", districtId);
-                        if (lt) qs.set("listingType", lt);
-                        if (min) qs.set("minPrice", min);
-                        if (max) qs.set("maxPrice", max);
+                const cityId = $("#city").val();
+                const districtId = $("#district").val();
+                const lt = $("#listingType").val();
+                const min = $("#minPrice").val();
+                const max = $("#maxPrice").val();
 
-                        const res = await PublicApi.get("/api/listings/search?" + qs.toString());
-                        const data = res?.data || res?.Data;
-                        const items = data?.items || data?.Items || [];
-                        total = data?.totalCount || data?.TotalCount || 0;
-                        pageSize = data?.pageSize || data?.PageSize || pageSize;
-                        const currentPage = data?.page || data?.Page || page;
+                if (cityId) qs.set("cityId", cityId);
+                if (districtId) qs.set("districtId", districtId);
+                if (lt) qs.set("listingType", lt);
+                if (min) qs.set("minPrice", min);
+                if (max) qs.set("maxPrice", max);
 
-                        $("#pagingInfo").text(`Sayfa ${currentPage} / ${Math.max(1, Math.ceil((total || 0) / pageSize))} | Toplam ${total}`);
+                try {
+                    const res = await PublicApi.get("/api/listings/search?" + qs.toString());
+                    const data = res?.data || res?.Data;
+                    const items = data?.items || data?.Items || [];
+                    total = data?.totalCount || data?.TotalCount || 0;
+                    pageSize = data?.pageSize || data?.PageSize || pageSize;
+                    const currentPage = data?.page || data?.Page || page;
+                    page = currentPage;
 
-                        if (!items.length) {
-                            $("#rows").html('<div class="list-group-item text-muted">Kayıt yok.</div>');
-                            return;
-                        }
+                    const maxPage = Math.max(1, Math.ceil((total || 0) / pageSize));
+                    $("#pagingInfo").text(`Sayfa ${currentPage} / ${maxPage} | Toplam ${total} İlan`);
 
-                        const html = items.map(x => {
-                            const id = x.id ?? x.Id;
-                            const title = x.title ?? x.Title;
-                            const price = x.price ?? x.Price;
-                            const city = x.cityName ?? x.CityName;
-                            const district = x.districtName ?? x.DistrictName;
-                            const created = x.createdAtUtc ?? x.CreatedAtUtc;
-                            return `
-        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-start" href="/Listings/Details/${id}">
-          <div class="me-3">
-            <div class="fw-semibold">${title}</div>
-            <div class="text-muted small">${city ?? ""} ${district ? " / " + district : ""}</div>
-            <div class="text-muted small">${created}</div>
-          </div>
-          <div class="text-end">
-            <div class="fw-semibold text-primary">${price?.toLocaleString?.("tr-TR") ?? price} ₺</div>
-          </div>
-        </a>`;
-                        }).join("");
+                    $("#prev").prop("disabled", page <= 1);
+                    $("#next").prop("disabled", page >= maxPage);
 
-                        $("#rows").html(html);
+                    if (!items.length) {
+                        $("#rows").html('<div class="col-12 text-center text-muted py-5 glass-panel">Kriterlerinize uygun ilan bulunamadı.</div>');
+                        return;
                     }
 
-                    $("#btnSearch").on("click", function () { page = 1; load().catch(e => setErr(e.message)); });
-                    $("#btnClear").on("click", function () {
-                        $("#city").val("");
-                        $("#district").html('<option value="">İlçe</option>');
-                        $("#listingType").val("");
-                        $("#minPrice").val("");
-                        $("#maxPrice").val("");
-                        page = 1;
-                        load().catch(e => setErr(e.message));
-                    });
-                    $("#prev").on("click", function () { if (page > 1) { page--; load().catch(e => setErr(e.message)); } });
-                    $("#next").on("click", function () {
-                        const maxPage = Math.ceil((total || 0) / pageSize);
-                        if (page < maxPage) { page++; load().catch(e => setErr(e.message)); }
-                    });
+                    const html = items.map((x, i) => {
+                        const id = x.id ?? x.Id;
+                        const title = x.title ?? x.Title;
+                        const price = x.price ?? x.Price;
+                        const city = x.cityName ?? x.CityName;
+                        const district = x.districtName ?? x.DistrictName;
+                        const img = imgUrl(x.coverImageUrl ?? x.CoverImageUrl, "https://picsum.photos/seed/" + id + "/600/400");
+                        
+                        return `
+                        <div class="col-sm-6 col-xl-4 animate-fade-in-up" style="animation-delay: ${50 * i}ms">
+                            <a href="/Listings/Details/${id}" class="text-decoration-none text-main">
+                                <div class="futuristic-card h-100">
+                                    <div class="card-img-wrapper" style="height:200px;">
+                                        <img src="${img}" class="w-100 h-100" loading="lazy" decoding="async" style="object-fit:cover;">
+                                        <div class="price-badge">${price?.toLocaleString?.("tr-TR") ?? price} ₺</div>
+                                    </div>
+                                    <div class="p-3 d-flex flex-column h-100">
+                                        <h6 class="fw-bold mb-2 text-white text-truncate" title="${title}">${title}</h6>
+                                        <div class="text-muted small mb-3">
+                                            <i class="bi bi-geo-alt me-1 text-info"></i> ${city ?? ""} ${district ? "/ " + district : ""}
+                                        </div>
+                                        <div class="mt-auto">
+                                            <span class="btn btn-outline-futuristic btn-sm w-100">İncele</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>`;
+                    }).join("");
 
-                    (async function init() {
-                        await loadCities();
-                        readFilters();
-                        await load();
-                    })();
-                });
+                    $("#rows").html(html);
+                } catch(e) {
+                    setErr(e.message);
+                    $("#rows").html('');
+                }
+            }
+
+            $("#btnSearch").on("click", function () { page = 1; load(); });
+            $("#btnClear").on("click", function () {
+                $("#city").val("");
+                $("#district").html('<option value="">İlçe Seçin</option>');
+                $("#listingType").val("");
+                $("#minPrice").val("");
+                $("#maxPrice").val("");
+                page = 1;
+                load();
+            });
+            $("#prev").on("click", function () { if (page > 1) { page--; load(); window.scrollTo(0,0); } });
+            $("#next").on("click", function () {
+                const maxPage = Math.ceil((total || 0) / pageSize);
+                if (page < maxPage) { page++; load(); window.scrollTo(0,0); }
+            });
+
+            (async function init() {
+                await loadCities();
+                readFilters();
+                await load();
+            })();
+        });
     </script>
 }

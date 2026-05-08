@@ -1,4 +1,4 @@
-﻿window.UserAuth = (function () {
+window.UserAuth = (function () {
     const tokenKey = "emlak_user_jwt";
     const userKey = "emlak_user_info";
     const apiBase = "https://localhost:7293";
@@ -26,45 +26,77 @@
         try { return JSON.parse(raw); } catch { return null; }
     }
 
-    async function login(email, password) {
-        const res = await fetch(apiBase + "/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password })
-        });
-        const text = await res.text();
-        const json = text ? JSON.parse(text) : null;
-        if (!res.ok || !json?.status && !json?.Status) {
-            throw new Error(json?.message || json?.Message || text || "Giriş başarısız.");
-        }
-        const token = json.data?.accessToken || json.Data?.AccessToken;
-        if (!token) throw new Error("Token alınamadı.");
-        setToken(token);
+    function login(email, password) {
+        return new Promise((resolve, reject) => {
+            email = (email ?? "").toString().trim();
+            password = (password ?? "").toString();
+            if (!email || !password) {
+                reject(new Error("E-posta ve şifre zorunludur."));
+                return;
+            }
 
-        // kullanıcı bilgisi
-        const meRes = await fetch(apiBase + "/api/auth/me", {
-            headers: { "Authorization": "Bearer " + token }
-        });
-        const meText = await meRes.text();
-        const meJson = meText ? JSON.parse(meText) : null;
-        const u = meJson?.data || meJson?.Data;
-        if (u) setUserInfo(u);
+            $.ajax({
+                url: apiBase + "/api/auth/login",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ email, password }),
+                success: function (json, textStatus, jqXHR) {
+                    if (!json?.status && !json?.Status) {
+                        reject(new Error(json?.message || json?.Message || "Giriş başarısız."));
+                        return;
+                    }
+                    const token = json.data?.accessToken || json.Data?.AccessToken;
+                    if (!token) {
+                        reject(new Error("Token alınamadı."));
+                        return;
+                    }
+                    setToken(token);
 
-        return json;
+                    // kullanıcı bilgisi
+                    $.ajax({
+                        url: apiBase + "/api/auth/me",
+                        type: "GET",
+                        headers: { "Authorization": "Bearer " + token },
+                        success: function (meJson) {
+                            const u = meJson?.data || meJson?.Data;
+                            if (u) setUserInfo(u);
+                            resolve(json);
+                        },
+                        error: function (jqXHR) {
+                            resolve(json); // Token alındı, profil bilgisi alınamasa da devam et
+                        }
+                    });
+                },
+                error: function (jqXHR) {
+                    let json = null;
+                    try { json = jqXHR.responseText ? JSON.parse(jqXHR.responseText) : null; } catch { }
+                    reject(new Error(json?.message || json?.Message || jqXHR.responseText || "Giriş başarısız."));
+                }
+            });
+        });
     }
 
-    async function register(fullName, email, password) {
-        const res = await fetch(apiBase + "/api/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fullName, email, password })
+    function register(fullName, email, password) {
+        return new Promise((resolve, reject) => {
+            $.ajax({
+                url: apiBase + "/api/auth/register",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ fullName, email, password }),
+                success: function (json, textStatus, jqXHR) {
+                    if (!json?.status && !json?.Status) {
+                        reject(new Error(json?.message || json?.Message || "Kayıt başarısız."));
+                        return;
+                    }
+                    resolve(json);
+                },
+                error: function (jqXHR) {
+                    let json = null;
+                    try { json = jqXHR.responseText ? JSON.parse(jqXHR.responseText) : null; } catch { }
+                    reject(new Error(json?.message || json?.Message || jqXHR.responseText || "Kayıt başarısız."));
+                }
+            });
         });
-        const text = await res.text();
-        const json = text ? JSON.parse(text) : null;
-        if (!res.ok || !json?.status && !json?.Status) {
-            throw new Error(json?.message || json?.Message || text || "Kayıt başarısız.");
-        }
-        return json;
     }
 
     return { getToken, setToken, clear, setUserInfo, getUserInfo, login, register, apiBase };

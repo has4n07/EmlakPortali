@@ -64,13 +64,20 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<DataResult<AuthResponseDto>> Login(LoginRequestDto dto)
     {
-        var user = await _userManager.FindByEmailAsync(dto.Email.Trim());
+        var email = dto.Email?.Trim();
+        var password = dto.Password;
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            return new DataResult<AuthResponseDto> { Status = false, Message = "E-posta ve şifre zorunludur." };
+        }
+
+        var user = await _userManager.FindByEmailAsync(email);
         if (user is null || !user.IsActive)
         {
             return new DataResult<AuthResponseDto> { Status = false, Message = "E-posta veya şifre hatalı." };
         }
 
-        var check = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: false);
+        var check = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
         if (!check.Succeeded)
         {
             return new DataResult<AuthResponseDto> { Status = false, Message = "E-posta veya şifre hatalı." };

@@ -57,13 +57,13 @@ public class ListingListItemDto
     public string DistrictName { get; set; } = null!;
     public string? CoverImageUrl { get; set; }
     public DateTime Created { get; set; }
+    public bool IsActive { get; set; }
+    public bool IsApproved { get; set; }
 }
 
 public class ListingDetailDto : ListingListItemDto
 {
     public string Description { get; set; } = null!;
-    public bool IsApproved { get; set; }
-    public bool IsActive { get; set; }
     public int CityId { get; set; }
     public int DistrictId { get; set; }
     public int? RoomCount { get; set; }
@@ -75,6 +75,8 @@ public class ListingDetailDto : ListingListItemDto
     public string? AddressLine { get; set; }
     public List<ListingImageDto> Images { get; set; } = new();
     public Guid OwnerUserId { get; set; }
+    public string? OwnerName { get; set; }
+    public string? OwnerPhone { get; set; }
 }
 
 public class ListingImageDto

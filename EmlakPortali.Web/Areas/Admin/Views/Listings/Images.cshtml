@@ -105,12 +105,19 @@
         }
 
         async function deleteImg(imgId) {
-            if(!confirm("Bu fotoğrafı kalıcı olarak silmek istediğinize emin misiniz?")) return;
+            const ok = await AdminConfirm({
+                title: "Fotoğrafı Sil",
+                message: "Bu fotoğrafı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+                okText: "Evet, Sil",
+                cancelText: "Vazgeç",
+                icon: "&#x1F4F7;"
+            });
+            if (!ok) return;
             try {
                 await AdminApi.delete(`/api/listings/${LI_ID}/images/${imgId}`);
                 await loadImages();
             } catch (e) {
-                alert("Silinemedi: " + (e?.message || String(e)));
+                AppNotify.error("Silinemedi: " + (e?.message || String(e)));
             }
         }
 

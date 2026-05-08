@@ -1,0 +1,293 @@
+@{
+    ViewData["Title"] = "Yeni İlan Ekle";
+}
+
+<div class="container pb-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h3 class="mb-0">Yeni İlan Ekle</h3>
+            <div class="text-muted">Profesyonel ilanınızı hızlıca oluşturun</div>
+        </div>
+        <div>
+            <a class="btn btn-outline-futuristic" href="/Listings">Geri Dön</a>
+        </div>
+    </div>
+
+    <div class="glass-panel p-4 p-lg-5">
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-8">
+            <div class="alert alert-danger d-none" id="errBox"></div>
+            <div class="alert alert-success d-none" id="successBox">İlan başarıyla oluşturuldu ve yayınlandı!</div>
+
+            <form id="frmCreate">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Başlık *</label>
+                        <input type="text" class="form-control" id="title" required maxlength="200" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fiyat *</label>
+                        <input type="number" class="form-control" id="price" required min="1" step="0.01" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">İlan Türü *</label>
+                        <select class="form-select" id="listingType" required>
+                            <option value="1">Satılık</option>
+                            <option value="2">Kiralık</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Kategori *</label>
+                        <select class="form-select" id="categoryId" required>
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">İl *</label>
+                        <select class="form-select" id="cityId" required>
+                            <option value="">Yükleniyor...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">İlçe *</label>
+                        <select class="form-select" id="districtId" required>
+                            <option value="">Önce il seçin</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Oda Sayısı</label>
+                        <input type="number" class="form-control" id="roomCount" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Banyo Sayısı</label>
+                        <input type="number" class="form-control" id="bathCount" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Bulunduğu Kat</label>
+                        <input type="number" class="form-control" id="floor" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Toplam Kat</label>
+                        <input type="number" class="form-control" id="totalFloors" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Brüt m²</label>
+                        <input type="number" class="form-control" id="areaGrossM2" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Net m²</label>
+                        <input type="number" class="form-control" id="areaNetM2" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Adres Tarifi</label>
+                        <input type="text" class="form-control" id="addressLine" maxlength="500" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fotoğraflar *</label>
+                        <input type="file" class="form-control" id="listingImages" accept=".jpg,.jpeg,.png,.webp" multiple />
+                        <div class="small text-muted mt-1">Birden fazla fotoğraf seçebilirsiniz. İlk fotoğraf kapak olarak ayarlanır.</div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Açıklama *</label>
+                        <textarea class="form-control" id="description" rows="4" required></textarea>
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary px-4 py-2" id="btnSubmit">
+                            <i class="ph ph-check me-2"></i> İlanı Kaydet
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+            <div class="col-lg-4">
+                <div class="glass-panel p-3">
+                    <div class="fw-semibold mb-2">Fotoğraf Önizleme</div>
+                    <div id="imgPreview" class="row g-2">
+                        <div class="col-12 text-muted small">Henüz fotoğraf seçilmedi.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            const baseUrl = "https://localhost:7293";
+            const token = UserAuth.getToken();
+            if (!token) {
+                window.location.href = "/Account/Login";
+                return;
+            }
+            const payload = (function () {
+                try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
+            })();
+            const roleClaim = payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+            const roles = Array.isArray(roleClaim) ? roleClaim : [roleClaim].filter(Boolean);
+            const canCreate = roles.includes("Realtor") || roles.includes("Admin");
+            if (!canCreate) {
+                AppNotify.warning("İlan ekleme yetkisi sadece emlakçı hesaplarındadır.");
+                window.location.href = "/";
+                return;
+            }
+
+            const getHeaders = () => ({
+                "Authorization": `Bearer ${token}`
+            });
+
+            const api = {
+                get: async (url) => {
+                    const res = await fetch(baseUrl + url, { headers: getHeaders() });
+                    if (!res.ok) throw new Error("API Hatası: " + res.status);
+                    return await res.json();
+                },
+                post: async (url, data) => {
+                    const res = await fetch(baseUrl + url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", ...getHeaders() },
+                        body: JSON.stringify(data)
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json?.message || json?.Message || "Hata oluştu");
+                    return json;
+                },
+                upload: async (url, file) => {
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    const res = await fetch(baseUrl + url, {
+                        method: "POST",
+                        headers: getHeaders(),
+                        body: fd
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json?.message || json?.Message || "Hata oluştu");
+                    return json;
+                }
+            };
+
+            function renderPreview(files) {
+                if (!files || files.length === 0) {
+                    $("#imgPreview").html('<div class="col-12 text-muted small">Henüz fotoğraf seçilmedi.</div>');
+                    return;
+                }
+                const html = Array.from(files).map((f, i) => {
+                    const url = URL.createObjectURL(f);
+                    return `
+                        <div class="col-6">
+                            <div class="border rounded overflow-hidden">
+                                <img src="${url}" class="w-100" style="height:110px; object-fit:cover;">
+                                <div class="small p-1 ${i === 0 ? "text-primary fw-semibold" : "text-muted"}">${i === 0 ? "Kapak" : "Galeri"} - ${f.name}</div>
+                            </div>
+                        </div>`;
+                }).join("");
+                $("#imgPreview").html(html);
+            }
+            
+            async function loadDropdowns() {
+                try {
+                    // Categories
+                    const catRes = await api.get("/api/categories");
+                    const cats = catRes?.data || catRes?.Data || [];
+                    $("#categoryId").html('<option value="">Seçiniz...</option>' + cats.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(''));
+                    
+                    // Cities
+                    const citRes = await api.get("/api/lookups/cities");
+                    const cits = citRes?.data || citRes?.Data || [];
+                    $("#cityId").html('<option value="">Seçiniz...</option>' + cits.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(''));
+                } catch (e) {
+                    $("#errBox").removeClass("d-none").text("Bağlantı hatası: " + (e?.message || "Yüklenemedi"));
+                }
+            }
+
+            $("#cityId").on("change", async function() {
+                const cid = $(this).val();
+                if (!cid) {
+                    $("#districtId").html('<option value="">Önce il seçin</option>');
+                    return;
+                }
+                $("#districtId").html('<option value="">Yükleniyor...</option>');
+                try {
+                    const disRes = await api.get(`/api/lookups/cities/${cid}/districts`);
+                    const dis = disRes?.data || disRes?.Data || [];
+                    $("#districtId").html('<option value="">Seçiniz...</option>' + dis.map(d => `<option value="${d.id ?? d.Id}">${d.name ?? d.Name}</option>`).join(''));
+                } catch (e) {
+                    $("#errBox").removeClass("d-none").text(e?.message);
+                }
+            });
+
+            $("#listingImages").on("change", function () {
+                renderPreview(this.files);
+            });
+
+            $("#frmCreate").on("submit", async function (e) {
+                e.preventDefault();
+                $("#errBox, #successBox").addClass("d-none");
+                $("#btnSubmit").prop("disabled", true).html('<span class="spinner-border spinner-border-sm me-2"></span> Yükleniyor...');
+                
+                function getInt(id) { const v = $("#"+id).val(); return v ? parseInt(v, 10) : null; }
+                function getDec(id) { const v = $("#"+id).val(); return v ? parseFloat(v) : null; }
+
+                const createPayload = {
+                    title: $("#title").val(),
+                    price: getDec("price"),
+                    listingType: getInt("listingType"),
+                    categoryId: getInt("categoryId"),
+                    cityId: getInt("cityId"),
+                    districtId: getInt("districtId"),
+                    roomCount: getInt("roomCount"),
+                    bathCount: getInt("bathCount"),
+                    floor: getInt("floor"),
+                    totalFloors: getInt("totalFloors"),
+                    areaGrossM2: getInt("areaGrossM2"),
+                    areaNetM2: getInt("areaNetM2"),
+                    addressLine: $("#addressLine").val() || null,
+                    description: $("#description").val(),
+                    coverImageUrl: null
+                };
+
+                try {
+                    const imageInput = $("#listingImages")[0];
+                    const files = imageInput?.files ? Array.from(imageInput.files) : [];
+                    if (files.length === 0) throw new Error("Lütfen en az bir fotoğraf seçin.");
+
+                    const uploadedUrls = [];
+                    for (const file of files) {
+                        const uploadRes = await api.upload("/api/listings/upload-image", file);
+                        const uploaded = uploadRes?.data?.url || uploadRes?.Data?.Url;
+                        if (uploaded) {
+                            uploadedUrls.push(uploaded);
+                        }
+                    }
+                    if (uploadedUrls.length === 0) throw new Error("Fotoğraflar yüklenemedi.");
+                    createPayload.coverImageUrl = uploadedUrls[0];
+
+                    const createRes = await api.post("/api/listings", createPayload);
+                    const listingId = createRes?.data?.id || createRes?.Data?.Id;
+                    if (listingId && uploadedUrls.length > 1) {
+                        for (let i = 1; i < uploadedUrls.length; i++) {
+                            await api.post(`/api/listings/${listingId}/images`, { url: uploadedUrls[i], sortOrder: i + 1 });
+                        }
+                    }
+                    $("#successBox").removeClass("d-none");
+                    $("#frmCreate").trigger("reset");
+                    $("#categoryId").val("");
+                    $("#cityId").val("");
+                    $("#districtId").html('<option value="">Önce il seçin</option>');
+                    renderPreview([]);
+                } catch (err) {
+                    $("#errBox").removeClass("d-none").text(err?.message || "İlan eklenirken hata oluştu.");
+                } finally {
+                    $("#btnSubmit").prop("disabled", false).html('<i class="bi bi-check me-2"></i> İlanı Kaydet');
+                }
+            });
+
+            loadDropdowns();
+        });
+    </script>
+}

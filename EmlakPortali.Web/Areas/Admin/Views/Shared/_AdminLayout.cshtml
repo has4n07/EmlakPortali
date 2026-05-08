@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
@@ -11,6 +11,9 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    <style>
+        body[data-role='Realtor'] .admin-only { display: none !important; }
+    </style>
 </head>
 <body class="sb-admin">
     <div class="d-flex w-100">
@@ -33,16 +36,20 @@
                    class="list-group-item rounded mb-1 ms-3 d-flex align-items-center text-muted small">
                     <i class="ph ph-plus-circle"></i> <span>Yeni İlan Ekle</span>
                 </a>
-                <a asp-area="Admin" asp-controller="Categories" asp-action="Index"
+                <a asp-area="Admin" asp-controller="Messages" asp-action="Index"
                    class="list-group-item rounded mb-1 d-flex align-items-center">
+                    <i class="ph ph-envelope-simple"></i> <span>Gelen Mesajlar</span>
+                </a>
+                <a asp-area="Admin" asp-controller="Categories" asp-action="Index"
+                   class="list-group-item rounded mb-1 d-flex align-items-center admin-only">
                     <i class="ph ph-folder-open"></i> <span>Kategoriler</span>
                 </a>
                 <a asp-area="Admin" asp-controller="Users" asp-action="Index"
-                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                   class="list-group-item rounded mb-1 d-flex align-items-center admin-only">
                     <i class="ph ph-users"></i> <span>Kullanıcılar</span>
                 </a>
                 <a asp-area="Admin" asp-controller="Roles" asp-action="Index"
-                   class="list-group-item rounded mb-1 d-flex align-items-center">
+                   class="list-group-item rounded mb-1 d-flex align-items-center admin-only">
                     <i class="ph ph-shield-check"></i> <span>Roller ve Yetkiler</span>
                 </a>
             </div>
@@ -62,6 +69,11 @@
                 </div>
 
                 <ul class="navbar-nav align-items-center mb-0">
+                    <li class="nav-item me-2">
+                        <a href="/" class="nav-link btn btn-outline-light btn-sm rounded-pill px-3">
+                            <i class="ph ph-house me-1"></i> Anasayfaya Dön
+                        </a>
+                    </li>
                     <li class="nav-item me-3">
                         <a class="nav-link btn btn-light btn-sm rounded-pill px-3 fw-medium d-flex align-items-center gap-2" asp-area="Admin" asp-controller="Profile" asp-action="Index">
                             <i class="ph ph-user-circle fs-5"></i> Profilim
@@ -86,12 +98,91 @@
         </div>
     </div>
 
+    <!-- Global Confirm Modal -->
+    <div id="adminConfirmModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:18px;padding:36px 32px 28px;max-width:420px;width:90%;box-shadow:0 24px 60px rgba(0,0,0,0.22);animation:confirmPop 0.22s cubic-bezier(.34,1.56,.64,1);text-align:center;">
+            <div id="acm-icon" style="font-size:3rem;margin-bottom:12px;">&#x1F5D1;</div>
+            <h5 id="acm-title" style="font-weight:700;margin-bottom:8px;color:#1e293b;">Emin misiniz?</h5>
+            <p id="acm-msg" style="color:#64748b;font-size:0.95rem;margin-bottom:24px;line-height:1.5;"></p>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button id="acm-cancel" style="flex:1;padding:11px 0;border-radius:10px;border:1.5px solid #e2e8f0;background:#f8fafc;color:#475569;font-weight:600;cursor:pointer;font-size:0.92rem;transition:all 0.18s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+                    Vazgec
+                </button>
+                <button id="acm-ok" style="flex:1;padding:11px 0;border-radius:10px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:700;cursor:pointer;font-size:0.92rem;box-shadow:0 4px 14px rgba(239,68,68,0.35);transition:all 0.18s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+                    Evet, Sil
+                </button>
+            </div>
+        </div>
+    </div>
+    <style>
+        @@keyframes confirmPop { from{opacity:0;transform:scale(0.88) translateY(12px);} to{opacity:1;transform:scale(1) translateY(0);} }
+    </style>
+
     <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/admin/admin-api.js" asp-append-version="true"></script>
     <script src="~/js/admin/admin-auth.js" asp-append-version="true"></script>
     <script>
+        /* ── Admin Panel JWT Guard ──────────────────────────────── */
+        (function () {
+            function parseJwt(token) {
+                try { return JSON.parse(atob(token.split('.')[1])); } catch { return null; }
+            }
+
+            // Her iki localStorage key'ini dene
+            const token = localStorage.getItem("emlak_admin_jwt") || localStorage.getItem("token");
+
+            if (!token) {
+                window.location.replace("/Admin/Account/Login");
+                return;
+            }
+
+            const payload = parseJwt(token);
+            if (!payload) {
+                window.location.replace("/Admin/Account/Login");
+                return;
+            }
+
+            // Token süresi dolmuş mu?
+            if (payload.exp && Date.now() / 1000 > payload.exp) {
+                localStorage.removeItem("emlak_admin_jwt");
+                localStorage.removeItem("token");
+                window.location.replace("/Admin/Account/Login");
+                return;
+            }
+
+            const roleClaim = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+            const roles = Array.isArray(roleClaim) ? roleClaim : [roleClaim].filter(Boolean);
+
+            const isAdmin = roles.includes("Admin");
+            const isRealtor = roles.includes("Realtor");
+
+            // Normal user veya rol yoksa → engelle
+            if (!isAdmin && !isRealtor) {
+                alert("Bu sayfaya erişim yetkiniz bulunmamaktadır.");
+                window.location.replace("/");
+                return;
+            }
+
+            // Token'ı her iki key'e de senkronize et (her iki mekanizma çalışsın)
+            localStorage.setItem("emlak_admin_jwt", token);
+
+            // Realtor ise bazı sayfaları engelle
+            if (isRealtor && !isAdmin) {
+                document.body.dataset.role = 'Realtor';
+                const path = window.location.pathname.toLowerCase();
+                const blocked = ["/admin/users", "/admin/roles", "/admin/categories"];
+                if (blocked.some(x => path.startsWith(x))) {
+                    alert("Bu sayfayı sadece admin görüntüleyebilir.");
+                    window.location.replace("/Admin");
+                }
+            } else if (isAdmin) {
+                document.body.dataset.role = 'Admin';
+            }
+        })();
+
         $(function () {
             // Sidebar Toggle
             $("#sidebarToggle").on("click", function (e) {
@@ -113,24 +204,15 @@
             // Load Welcome Section
             async function loadWelcome() {
                 const span = $("#adminWelcome");
-                const cached = window.AdminAuth?.getUserInfo?.();
-                if (cached?.fullName || cached?.FullName) {
-                    span.text(`Merhaba, ${cached.fullName ?? cached.FullName} 👋`);
-                    return;
-                }
-
-                const token = window.AdminAuth?.getToken?.();
-                if (!token) {
-                    span.text("Yönetim Paneline Hoş Geldiniz");
-                    return;
-                }
-
                 try {
-                    const me = await window.AdminApi.get("/api/auth/me");
+                    const me = await window.AdminApi.get("/api/profile/me");
                     const u = me?.data || me?.Data;
                     if (u) {
-                        window.AdminAuth?.setUserInfo?.(u);
                         span.text(`Merhaba, ${u.fullName ?? u.FullName ?? u.email ?? u.Email} 👋`);
+                        const roles = u.roles || u.Roles || [];
+                        if (roles.includes("Realtor") && !roles.includes("Admin")) {
+                            document.body.dataset.role = 'Realtor';
+                        }
                     } else {
                         span.text("Yönetim Paneline Hoş Geldiniz");
                     }

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Giriş Yap";
 }
 
@@ -14,11 +14,11 @@
 
                     <div class="mb-3">
                         <label class="form-label">E-posta</label>
-                        <input class="form-control" id="email" type="email" />
+                        <input class="form-control" id="email" type="email" required />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Şifre</label>
-                        <input class="form-control" id="password" type="password" />
+                        <input class="form-control" id="password" type="password" required />
                     </div>
                     <div class="d-grid mb-2">
                         <button class="btn btn-primary" id="btnLogin" type="button">Giriş Yap</button>
@@ -38,11 +38,23 @@
         $(function () {
             $("#btnLogin").on("click", async function () {
                 $("#loginErr").addClass("d-none").text("");
+                const email = ($("#email").val() || "").toString().trim();
+                const password = ($("#password").val() || "").toString();
+                if (!email || !password) {
+                    $("#loginErr").removeClass("d-none").text("E-posta ve şifre zorunludur.");
+                    return;
+                }
                 try {
-                    await UserAuth.login($("#email").val(), $("#password").val());
-                    window.location.href = "/Account/Me";
+                    await UserAuth.login(email, password);
+                    window.location.href = "/";
                 } catch (e) {
                     $("#loginErr").removeClass("d-none").text(e?.message ?? String(e));
+                }
+            });
+
+            $("#password, #email").on("keydown", function (e) {
+                if (e.key === "Enter") {
+                    $("#btnLogin").trigger("click");
                 }
             });
         });

@@ -157,10 +157,24 @@
                     animateValue("statTotalListings", 0, d.totalListings ?? d.TotalListings ?? 0, 1000);
                     animateValue("statPendingListings", 0, d.pendingListings ?? d.PendingListings ?? 0, 800);
                     animateValue("statActiveListings", 0, d.activeListings ?? d.ActiveListings ?? 0, 900);
-                    animateValue("statTotalUsers", 0, d.totalUsers ?? d.TotalUsers ?? 0, 1000);
+                    
+                    const tUsers = d.totalUsers ?? d.TotalUsers;
+                    if (tUsers !== null && tUsers !== undefined) {
+                        animateValue("statTotalUsers", 0, tUsers, 1000);
+                    } else {
+                        $("#statTotalUsers").closest(".col-xl-3").hide();
+                    }
                 }
             } catch {
                 // Sessiz geç
+            }
+            
+            const cached = window.AdminAuth?.getUserInfo?.();
+            if (cached) {
+                const roles = cached.roles || cached.Roles || [];
+                if (roles.includes("Realtor") && !roles.includes("Admin")) {
+                    $("#statTotalUsers").closest(".col-xl-3").hide();
+                }
             }
         });
     </script>

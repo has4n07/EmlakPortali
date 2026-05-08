@@ -33,6 +33,8 @@ public class Listing : BaseEntity
 
     public bool IsApproved { get; set; } = false;
 
+    public int ViewCount { get; set; } = 0;
+
     public List<ListingImage> Images { get; set; } = new();
 }
 

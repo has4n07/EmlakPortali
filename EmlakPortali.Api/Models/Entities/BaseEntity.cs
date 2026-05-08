@@ -1,4 +1,4 @@
-namespace EmlakPortali.Api.Models.Entities;
+﻿namespace EmlakPortali.Api.Models.Entities;
 
 public abstract class BaseEntity
 {
@@ -6,4 +6,3 @@ public abstract class BaseEntity
     public DateTime Created { get; set; } = DateTime.UtcNow;
     public DateTime? Updated { get; set; }
 }
-

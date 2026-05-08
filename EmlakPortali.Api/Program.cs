@@ -113,9 +113,14 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<ImageValidationService>();
+builder.Services.AddScoped(typeof(GenericRepository<>));
 builder.Services.AddScoped<ListingRepository>();
 builder.Services.AddScoped<LookupRepository>();
 builder.Services.AddScoped<FavoriteRepository>();
+builder.Services.AddScoped<CategoryRepository>();
+builder.Services.AddScoped<CityRepository>();
+builder.Services.AddScoped<DistrictRepository>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
@@ -142,3 +147,4 @@ app.MapControllers();
 await SeedData.EnsureSeedDataAsync(app);
 
 app.Run();
+

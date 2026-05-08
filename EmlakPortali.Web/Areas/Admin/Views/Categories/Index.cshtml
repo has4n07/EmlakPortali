@@ -194,7 +194,14 @@
 
     // ───── Delete ────────────────────────────────────────────────────────────
     async function deleteCategory(id) {
-        if (!confirm("Bu kategoriyi silmek istediğinize emin misiniz?")) return;
+        const catName = $(`#cat_name_${id}`).text().trim();
+        const ok = await AdminConfirm({
+            title: "Kategoriyi Sil",
+            message: '"' + (catName || "Bu kategori") + '" kategorisini kalıcı olarak silmek istediğinize emin misiniz?',
+            okText: "Evet, Sil",
+            cancelText: "Vazgeç"
+        });
+        if (!ok) return;
         setErr(null); setOk(null);
         try {
             await AdminApi.delete(`/api/categories/${id}`);

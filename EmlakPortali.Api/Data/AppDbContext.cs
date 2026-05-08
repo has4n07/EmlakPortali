@@ -16,6 +16,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Listing> Listings => Set<Listing>();
     public DbSet<ListingImage> ListingImages => Set<ListingImage>();
     public DbSet<FavoriteListing> FavoriteListings => Set<FavoriteListing>();
+    public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
+    public DbSet<News> News => Set<News>();
+    public DbSet<Project> Projects => Set<Project>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -80,6 +83,29 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         {
             b.HasIndex(x => new { x.UserId, x.ListingId }).IsUnique();
         });
+
+        builder.Entity<News>(b =>
+        {
+            b.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Slug).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Summary).HasMaxLength(500);
+            b.Property(x => x.Category).HasMaxLength(100);
+            b.HasIndex(x => x.Slug).IsUnique();
+            b.HasIndex(x => x.Created);
+        });
+
+        builder.Entity<Project>(b =>
+        {
+            b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            b.Property(x => x.Slug).HasMaxLength(200).IsRequired();
+            b.Property(x => x.City).HasMaxLength(100);
+            b.Property(x => x.District).HasMaxLength(100);
+            b.Property(x => x.Description).HasMaxLength(4000);
+            b.Property(x => x.RoomTypes).HasMaxLength(200);
+            b.Property(x => x.Status).HasMaxLength(50);
+            b.Property(x => x.DeliveryDate).HasMaxLength(50);
+            b.HasIndex(x => x.Slug).IsUnique();
+            b.HasIndex(x => x.Created);
+        });
     }
 }
-

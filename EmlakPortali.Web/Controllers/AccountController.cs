@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace EmlakPortali.Web.Controllers;
 
@@ -9,4 +9,5 @@ public class AccountController : Controller
     public IActionResult Me() => View();
     public IActionResult MyListings() => View();
     public IActionResult Favorites() => View();
+    public IActionResult Messages() => View();
 }

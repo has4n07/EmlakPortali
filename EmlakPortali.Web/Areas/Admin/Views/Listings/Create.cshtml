@@ -1,199 +1,430 @@
-@{
-    ViewData["Title"] = "Yeni İlan Ekle";
+﻿@{
+    ViewData["Title"] = "Yeni Ilan Ekle";
 }
 
-<div class="container">
-    <div class="d-flex align-items-center justify-content-between mb-3">
+<style>
+    .photo-drop-zone {
+        border: 2px dashed #6366f1;
+        border-radius: 14px;
+        padding: 32px 20px;
+        text-align: center;
+        cursor: pointer;
+        background: rgba(99,102,241,0.04);
+        transition: background 0.2s, border-color 0.2s;
+    }
+    .photo-drop-zone:hover, .photo-drop-zone.dragover {
+        background: rgba(99,102,241,0.10);
+        border-color: #4f46e5;
+    }
+    .photo-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+    }
+    .photo-thumb {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        aspect-ratio: 1;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        border: 2.5px solid transparent;
+        cursor: pointer;
+        transition: border-color 0.18s, transform 0.18s;
+    }
+    .photo-thumb:hover { transform: scale(1.03); }
+    .photo-thumb.cover-selected { border-color: #6366f1; }
+    .photo-thumb img {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .photo-thumb .remove-btn {
+        position: absolute; top: 5px; right: 5px;
+        background: rgba(239,68,68,0.92); color: #fff;
+        border: none; border-radius: 50%;
+        width: 24px; height: 24px; font-size: 0.7rem;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; opacity: 0; transition: opacity 0.15s;
+    }
+    .photo-thumb:hover .remove-btn { opacity: 1; }
+    .photo-thumb .cover-badge {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: rgba(99,102,241,0.85); color: #fff;
+        font-size: 0.65rem; font-weight: 700; text-align: center;
+        padding: 3px 0; letter-spacing: 0.04em;
+    }
+    .upload-progress-bar {
+        height: 5px; border-radius: 4px;
+        background: linear-gradient(90deg,#6366f1,#a855f7);
+        width: 0%; transition: width 0.3s;
+    }
+</style>
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
         <div>
-            <h3 class="mb-0">Yeni İlan Ekle</h3>
-            <div class="text-muted">Sisteme yeni bir ilan tanımlayın</div>
+            <h3 class="fw-bold mb-1 text-gradient">Yeni Ilan Ekle</h3>
+            <div class="text-muted small">Sisteme yeni bir ilan tanimlayin</div>
         </div>
-        <div>
-            <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Listings" asp-action="Index">Geri Dön</a>
-        </div>
+        <a class="btn btn-outline-secondary" asp-area="Admin" asp-controller="Listings" asp-action="Index">
+            <i class="ph ph-arrow-left"></i> Geri Don
+        </a>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="alert alert-danger d-none" id="errBox"></div>
-            <div class="alert alert-success d-none" id="successBox">İlan başarıyla oluşturuldu ve yayınlandı!</div>
+    <div class="alert alert-danger d-none" id="errBox"></div>
+    <div class="alert alert-success d-none" id="successBox">
+        <i class="ph ph-check-circle me-2"></i>
+        Ilan basariyla olusturuldu! <a href="/Admin/Listings" class="alert-link">Ilanlari goruntule</a>
+    </div>
 
-            <form id="frmCreate">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Başlık *</label>
-                        <input type="text" class="form-control" id="title" required maxlength="200" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Fiyat *</label>
-                        <input type="number" class="form-control" id="price" required min="1" step="0.01" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">İlan Türü *</label>
-                        <select class="form-select" id="listingType" required>
-                            <option value="1">Satılık</option>
-                            <option value="2">Kiralık</option>
-                        </select>
-                    </div>
+    <form id="frmCreate" novalidate>
+        <div class="row g-4">
 
-                    <div class="col-md-4">
-                        <label class="form-label">Kategori *</label>
-                        <select class="form-select" id="categoryId" required>
-                            <option value="">Yükleniyor...</option>
-                        </select>
+            <!-- Sol: Temel Bilgiler -->
+            <div class="col-xl-8">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-transparent pt-4 pb-0 border-0">
+                        <h5 class="fw-bold mb-0"><i class="ph ph-info text-primary me-2"></i>Temel Bilgiler</h5>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">İl *</label>
-                        <select class="form-select" id="cityId" required>
-                            <option value="">Yükleniyor...</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">İlçe *</label>
-                        <select class="form-select" id="districtId" required>
-                            <option value="">Önce il seçin</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Oda Sayısı</label>
-                        <input type="number" class="form-control" id="roomCount" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Banyo Sayısı</label>
-                        <input type="number" class="form-control" id="bathCount" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Bulunduğu Kat</label>
-                        <input type="number" class="form-control" id="floor" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Toplam Kat</label>
-                        <input type="number" class="form-control" id="totalFloors" />
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Brüt m²</label>
-                        <input type="number" class="form-control" id="areaGrossM2" />
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Net m²</label>
-                        <input type="number" class="form-control" id="areaNetM2" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Adres Tarifi</label>
-                        <input type="text" class="form-control" id="addressLine" maxlength="500" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Kapak Fotoğrafı</label>
-                        <input type="file" class="form-control" id="coverImage" accept=".jpg,.jpeg,.png,.webp" />
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">Açıklama *</label>
-                        <textarea class="form-control" id="description" rows="4" required></textarea>
-                    </div>
-
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary px-4 py-2" id="btnSubmit">
-                            <i class="ph ph-check me-2"></i> İlanı Kaydet
-                        </button>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Baslik <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" maxlength="200" placeholder="Ornegin: Deniz Manzarali 3+1 Daire" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Fiyat (TL) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="price" min="1" placeholder="2.500.000" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Ilan Turu <span class="text-danger">*</span></label>
+                                <select class="form-select" id="listingType" required>
+                                    <option value="1">Satilik</option>
+                                    <option value="2">Kiralik</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Kategori <span class="text-danger">*</span></label>
+                                <select class="form-select" id="categoryId" required>
+                                    <option value="">Yukleniyor...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Il <span class="text-danger">*</span></label>
+                                <select class="form-select" id="cityId" required>
+                                    <option value="">Yukleniyor...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Ilce <span class="text-danger">*</span></label>
+                                <select class="form-select" id="districtId" required>
+                                    <option value="">Once il secin</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Aciklama <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="description" rows="4" required placeholder="Ilan hakkinda detayli aciklama..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Adres Tarifi</label>
+                                <input type="text" class="form-control" id="addressLine" maxlength="500" placeholder="Mah. Sok. No: ..." />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </form>
+
+                <!-- Detaylar -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-transparent pt-4 pb-0 border-0">
+                        <h5 class="fw-bold mb-0"><i class="ph ph-sliders-horizontal text-primary me-2"></i>Detay Bilgiler</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Oda Sayisi</label>
+                                <input type="number" class="form-control" id="roomCount" min="0" placeholder="3" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Banyo Sayisi</label>
+                                <input type="number" class="form-control" id="bathCount" min="0" placeholder="1" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Bulundugu Kat</label>
+                                <input type="number" class="form-control" id="floor" placeholder="3" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Toplam Kat</label>
+                                <input type="number" class="form-control" id="totalFloors" placeholder="8" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Brut m2</label>
+                                <input type="number" class="form-control" id="areaGrossM2" placeholder="120" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Net m2</label>
+                                <input type="number" class="form-control" id="areaNetM2" placeholder="105" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sag: Fotograf Yukleme -->
+            <div class="col-xl-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-transparent pt-4 pb-0 border-0">
+                        <h5 class="fw-bold mb-0"><i class="ph ph-images text-primary me-2"></i>Fotograflar</h5>
+                        <div class="text-muted small mt-1">Birden fazla secebilirsiniz. Ilk fotograf kapak olur.</div>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- Drop Zone -->
+                        <div class="photo-drop-zone" id="dropZone">
+                            <i class="ph ph-upload-simple" style="font-size:2rem;color:#6366f1;"></i>
+                            <div class="fw-semibold mt-2" style="color:#6366f1;">Fotograflari Surukleyin</div>
+                            <div class="text-muted small mt-1">ya da tiklayarak secin</div>
+                            <div class="text-muted" style="font-size:0.72rem; margin-top:6px;">JPG, PNG, WEBP &bull; Max 5 MB</div>
+                        </div>
+                        <input type="file" id="photoFiles" accept=".jpg,.jpeg,.png,.webp" multiple class="d-none" />
+
+                        <!-- Progress -->
+                        <div id="uploadProgressWrap" class="d-none mt-3">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span id="uploadStatusText">Yukleniyor...</span>
+                                <span id="uploadCountText"></span>
+                            </div>
+                            <div style="background:#e2e8f0; border-radius:4px; overflow:hidden;">
+                                <div class="upload-progress-bar" id="uploadProgressBar"></div>
+                            </div>
+                        </div>
+
+                        <!-- Preview Grid -->
+                        <div class="photo-preview-grid" id="previewGrid"></div>
+
+                        <div class="text-muted small mt-3" id="photoHint" style="display:none;">
+                            <i class="ph ph-info-circle me-1"></i>
+                            Fotografi tiklayarak <strong>kapak</strong> olarak secebilirsiniz.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="col-12">
+                <div class="d-flex gap-3">
+                    <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold shadow-sm" id="btnSubmit">
+                        <i class="ph ph-check-circle me-2"></i> Ilani Kaydet
+                    </button>
+                    <a class="btn btn-outline-secondary px-4 py-2" asp-area="Admin" asp-controller="Listings" asp-action="Index">
+                        Iptal
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
+    </form>
 </div>
 
 @section Scripts {
-    <script>
-        $(function () {
-            const api = window.AdminApi;
-            
-            async function loadDropdowns() {
-                try {
-                    // Categories
-                    const catRes = await api.get("/api/categories");
-                    const cats = catRes?.data || catRes?.Data || [];
-                    $("#categoryId").html('<option value="">Seçiniz...</option>' + cats.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(''));
-                    
-                    // Cities
-                    const citRes = await api.get("/api/lookups/cities");
-                    const cits = citRes?.data || citRes?.Data || [];
-                    $("#cityId").html('<option value="">Seçiniz...</option>' + cits.map(c => `<option value="${c.id ?? c.Id}">${c.name ?? c.Name}</option>`).join(''));
-                } catch (e) {
-                    $("#errBox").removeClass("d-none").text("Bağlantı hatası: " + (e?.message || "Yüklenemedi"));
+<script>
+$(function () {
+    const api = window.AdminApi;
+
+    // ── Fotograf state ──────────────────────────────────────────────
+    let _photos = [];  // [{file, objectUrl, uploaded: false, serverUrl: null}]
+    let _coverIdx = 0; // hangi index kapak
+
+    // ── Drop Zone ───────────────────────────────────────────────────
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('photoFiles');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        addFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', function () {
+        addFiles(this.files);
+        this.value = '';
+    });
+
+    function addFiles(files) {
+        Array.from(files).forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            if (file.size > 5 * 1024 * 1024) {
+                AppNotify.warning(file.name + ' dosyasi 5 MB sinirini asiyor, atlandi.');
+                return;
+            }
+            _photos.push({ file, objectUrl: URL.createObjectURL(file), uploaded: false, serverUrl: null });
+        });
+        renderPreviews();
+    }
+
+    function renderPreviews() {
+        const grid = document.getElementById('previewGrid');
+        grid.innerHTML = '';
+        document.getElementById('photoHint').style.display = _photos.length ? '' : 'none';
+
+        _photos.forEach((p, i) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumb' + (i === _coverIdx ? ' cover-selected' : '');
+            thumb.title = 'Kapak yap';
+            thumb.innerHTML = `
+                <img src="${p.objectUrl}" alt="Fotograf ${i+1}">
+                ${i === _coverIdx ? '<div class="cover-badge">KAPAK</div>' : ''}
+                <button class="remove-btn" data-idx="${i}" title="Kaldir">&#x2715;</button>
+            `;
+            thumb.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-btn')) return;
+                _coverIdx = i;
+                renderPreviews();
+            });
+            thumb.querySelector('.remove-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                URL.revokeObjectURL(_photos[i].objectUrl);
+                _photos.splice(i, 1);
+                if (_coverIdx >= _photos.length) _coverIdx = Math.max(0, _photos.length - 1);
+                renderPreviews();
+            });
+            grid.appendChild(thumb);
+        });
+    }
+
+    // ── Dropdown Yukleme ────────────────────────────────────────────
+    async function loadDropdowns() {
+        try {
+            const [catRes, citRes] = await Promise.all([
+                api.get('/api/categories'),
+                api.get('/api/lookups/cities')
+            ]);
+            const cats = catRes?.data || catRes?.Data || [];
+            const cits = citRes?.data || citRes?.Data || [];
+            $('#categoryId').html('<option value="">Seciniz...</option>' + cats.map(c => `<option value="${c.id??c.Id}">${c.name??c.Name}</option>`).join(''));
+            $('#cityId').html('<option value="">Seciniz...</option>' + cits.map(c => `<option value="${c.id??c.Id}">${c.name??c.Name}</option>`).join(''));
+        } catch (e) {
+            showErr('Baglanti hatasi: ' + (e?.message || 'Yuklenemedi'));
+        }
+    }
+
+    $('#cityId').on('change', async function () {
+        const cid = $(this).val();
+        if (!cid) { $('#districtId').html('<option value="">Once il secin</option>'); return; }
+        $('#districtId').html('<option value="">Yukleniyor...</option>');
+        try {
+            const r = await api.get(`/api/lookups/cities/${cid}/districts`);
+            const dis = r?.data || r?.Data || [];
+            $('#districtId').html('<option value="">Seciniz...</option>' + dis.map(d => `<option value="${d.id??d.Id}">${d.name??d.Name}</option>`).join(''));
+        } catch (e) { showErr(e?.message); }
+    });
+
+    // ── Hata / OK ───────────────────────────────────────────────────
+    function showErr(msg) {
+        if (!msg) { $('#errBox').addClass('d-none'); return; }
+        $('#errBox').removeClass('d-none').text(msg);
+        $('#successBox').addClass('d-none');
+    }
+
+    // ── Form Submit ─────────────────────────────────────────────────
+    $('#frmCreate').on('submit', async function (e) {
+        e.preventDefault();
+        showErr(null);
+        $('#successBox').addClass('d-none');
+
+        const btn = $('#btnSubmit');
+        const og  = btn.html();
+        btn.prop('disabled', true);
+
+        function getInt(id) { const v = $('#'+id).val(); return v ? parseInt(v,10) : null; }
+        function getDec(id) { const v = $('#'+id).val(); return v ? parseFloat(v) : null; }
+
+        const payload = {
+            title:        $('#title').val().trim(),
+            price:        getDec('price'),
+            listingType:  getInt('listingType'),
+            categoryId:   getInt('categoryId'),
+            cityId:       getInt('cityId'),
+            districtId:   getInt('districtId'),
+            roomCount:    getInt('roomCount'),
+            bathCount:    getInt('bathCount'),
+            floor:        getInt('floor'),
+            totalFloors:  getInt('totalFloors'),
+            areaGrossM2:  getInt('areaGrossM2'),
+            areaNetM2:    getInt('areaNetM2'),
+            addressLine:  $('#addressLine').val() || null,
+            description:  $('#description').val().trim(),
+            coverImageUrl: null
+        };
+
+        try {
+            // ── 1. Fotograflari yukle ─────────────────────────────
+            if (_photos.length > 0) {
+                const wrap = document.getElementById('uploadProgressWrap');
+                const bar  = document.getElementById('uploadProgressBar');
+                const txt  = document.getElementById('uploadStatusText');
+                const cnt  = document.getElementById('uploadCountText');
+                wrap.classList.remove('d-none');
+
+                for (let i = 0; i < _photos.length; i++) {
+                    txt.textContent = `Fotograf ${i+1}/${_photos.length} yukleniyor...`;
+                    cnt.textContent = `${i+1} / ${_photos.length}`;
+                    bar.style.width = Math.round(((i) / _photos.length) * 80) + '%';
+                    btn.html(`<span class="spinner-border spinner-border-sm me-2"></span> ${i+1}/${_photos.length} yukleniyor...`);
+
+                    const upRes = await api.upload('/api/listings/upload-image', _photos[i].file);
+                    const url = upRes?.data?.url || upRes?.data?.Url || upRes?.Data?.url || upRes?.Data?.Url || upRes?.url;
+                    if (!url) throw new Error(`${_photos[i].file.name} yuklendi fakat URL alinamadi.`);
+                    _photos[i].serverUrl = url;
+                    _photos[i].uploaded = true;
+                }
+
+                bar.style.width = '90%';
+                txt.textContent = 'Ilan olusturuluyor...';
+                payload.coverImageUrl = _photos[_coverIdx]?.serverUrl || _photos[0]?.serverUrl || null;
+            }
+
+            // ── 2. Ilani olustur ──────────────────────────────────
+            btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Kaydediliyor...');
+            const createRes = await api.post('/api/listings', payload);
+            const newId = createRes?.data?.id || createRes?.Data?.Id || createRes?.data?.Id;
+
+            // ── 3. Ek fotograflari ilana bagla ───────────────────
+            if (newId && _photos.length > 1) {
+                for (let i = 0; i < _photos.length; i++) {
+                    if (i === _coverIdx) continue; // kapak zaten coverImageUrl olarak eklendi
+                    try {
+                        await api.post(`/api/listings/${newId}/images`, { url: _photos[i].serverUrl, sortOrder: i * 10 });
+                    } catch {}
                 }
             }
 
-            $("#cityId").on("change", async function() {
-                const cid = $(this).val();
-                if (!cid) {
-                    $("#districtId").html('<option value="">Önce il seçin</option>');
-                    return;
-                }
-                $("#districtId").html('<option value="">Yükleniyor...</option>');
-                try {
-                    const disRes = await api.get(`/api/lookups/cities/${cid}/districts`);
-                    const dis = disRes?.data || disRes?.Data || [];
-                    $("#districtId").html('<option value="">Seçiniz...</option>' + dis.map(d => `<option value="${d.id ?? d.Id}">${d.name ?? d.Name}</option>`).join(''));
-                } catch (e) {
-                    $("#errBox").removeClass("d-none").text(e?.message);
-                }
-            });
+            document.getElementById('uploadProgressBar').style.width = '100%';
+            document.getElementById('uploadStatusText').textContent = 'Tamamlandi!';
 
-            $("#frmCreate").on("submit", async function (e) {
-                e.preventDefault();
-                $("#errBox, #successBox").addClass("d-none");
-                $("#btnSubmit").prop("disabled", true).html('<span class="spinner-border spinner-border-sm me-2"></span> Yükleniyor...');
-                
-                function getInt(id) { const v = $("#"+id).val(); return v ? parseInt(v, 10) : null; }
-                function getDec(id) { const v = $("#"+id).val(); return v ? parseFloat(v) : null; }
+            // Temizle
+            setTimeout(() => {
+                document.getElementById('uploadProgressWrap').classList.add('d-none');
+                document.getElementById('uploadProgressBar').style.width = '0%';
+            }, 1500);
 
-                const payload = {
-                    title: $("#title").val(),
-                    price: getDec("price"),
-                    listingType: getInt("listingType"),
-                    categoryId: getInt("categoryId"),
-                    cityId: getInt("cityId"),
-                    districtId: getInt("districtId"),
-                    roomCount: getInt("roomCount"),
-                    bathCount: getInt("bathCount"),
-                    floor: getInt("floor"),
-                    totalFloors: getInt("totalFloors"),
-                    areaGrossM2: getInt("areaGrossM2"),
-                    areaNetM2: getInt("areaNetM2"),
-                    addressLine: $("#addressLine").val() || null,
-                    description: $("#description").val(),
-                    coverImageUrl: null
-                };
+            _photos.forEach(p => URL.revokeObjectURL(p.objectUrl));
+            _photos = []; _coverIdx = 0;
+            renderPreviews();
 
-                try {
-                    const coverFileInput = $("#coverImage")[0];
-                    if (coverFileInput && coverFileInput.files && coverFileInput.files.length > 0) {
-                        const file = coverFileInput.files[0];
-                        const uploadRes = await api.upload("/api/listings/upload-image", file);
-                        if(uploadRes?.data?.url || uploadRes?.Data?.Url) {
-                            payload.coverImageUrl = uploadRes.data?.url || uploadRes.Data?.Url;
-                        }
-                    }
+            $('#frmCreate')[0].reset();
+            $('#categoryId, #cityId').val('');
+            $('#districtId').html('<option value="">Once il secin</option>');
+            $('#successBox').removeClass('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                    // Uses regular user listing submission endpoint, assuming admin token is valid.
-                    // Or wait, admin tokens work universally for Auth.
-                    await api.post("/api/listings", payload);
-                    $("#successBox").removeClass("d-none");
-                    $("#frmCreate").trigger("reset");
-                    $("#categoryId").val("");
-                    $("#cityId").val("");
-                    $("#districtId").html('<option value="">Önce il seçin</option>');
-                } catch (err) {
-                    $("#errBox").removeClass("d-none").text(err?.message || "İlan eklenirken hata oluştu.");
-                } finally {
-                    $("#btnSubmit").prop("disabled", false).html('<i class="ph ph-check me-2"></i> İlanı Kaydet');
-                }
-            });
+        } catch (err) {
+            showErr(err?.message || 'Ilan eklenirken hata olustu.');
+        } finally {
+            btn.prop('disabled', false).html(og);
+        }
+    });
 
-            loadDropdowns();
-        });
-    </script>
+    loadDropdowns();
+});
+</script>
 }

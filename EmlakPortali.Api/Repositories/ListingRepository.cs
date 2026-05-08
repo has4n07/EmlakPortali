@@ -65,7 +65,9 @@ public class ListingRepository
                 CityName = x.City.Name,
                 DistrictName = x.District.Name,
                 CoverImageUrl = x.CoverImageUrl,
-                Created = x.Created
+                Created = x.Created,
+                IsActive = x.IsActive,
+                IsApproved = x.IsApproved
             })
             .Take(take)
             .ToListAsync();
@@ -95,7 +97,9 @@ public class ListingRepository
                 CityName = x.City.Name,
                 DistrictName = x.District.Name,
                 CoverImageUrl = x.CoverImageUrl,
-                Created = x.Created
+                Created = x.Created,
+                IsActive = x.IsActive,
+                IsApproved = x.IsApproved
             })
             .ToListAsync();
 
@@ -108,12 +112,18 @@ public class ListingRepository
         };
     }
 
-    public async Task<PagedResponseDto<ListingListItemDto>> SearchAdminAsync(ListingSearchQueryDto q, bool? approved = null, bool? isActive = null)
+    public async Task<PagedResponseDto<ListingListItemDto>> SearchAdminAsync(ListingSearchQueryDto q, bool? approved = null, bool? isActive = null, Guid? ownerUserId = null)
     {
         var page = Math.Max(1, q.Page);
         var pageSize = Math.Clamp(q.PageSize, 1, 100);
 
         var baseQuery = _db.Listings.AsNoTracking();
+        
+        if (ownerUserId.HasValue)
+        {
+            baseQuery = baseQuery.Where(x => x.OwnerUserId == ownerUserId.Value);
+        }
+
         baseQuery = ApplySearch(baseQuery, q, onlyPublicApprovedActive: false);
 
         if (approved.HasValue) baseQuery = baseQuery.Where(x => x.IsApproved == approved.Value);
@@ -135,7 +145,9 @@ public class ListingRepository
                 CityName = x.City.Name,
                 DistrictName = x.District.Name,
                 CoverImageUrl = x.CoverImageUrl,
-                Created = x.Created
+                Created = x.Created,
+                IsActive = x.IsActive,
+                IsApproved = x.IsApproved
             })
             .ToListAsync();
 
@@ -175,7 +187,9 @@ public class ListingRepository
                 CityName = x.City.Name,
                 DistrictName = x.District.Name,
                 CoverImageUrl = x.CoverImageUrl,
-                Created = x.Created
+                Created = x.Created,
+                IsActive = x.IsActive,
+                IsApproved = x.IsApproved
             })
             .ToListAsync();
 
@@ -222,7 +236,9 @@ public class ListingRepository
                     Url = i.Url,
                     SortOrder = i.SortOrder
                 }).ToList(),
-                OwnerUserId = x.OwnerUserId
+                OwnerUserId = x.OwnerUserId,
+                OwnerName = x.OwnerUser.FullName,
+                OwnerPhone = x.OwnerUser.PhoneNumber ?? "0555 555 5555" // Fallback dummy phone for seed users
             })
             .FirstOrDefaultAsync();
     }
@@ -343,6 +359,7 @@ public class ListingRepository
     {
         entity.IsActive = isActive;
         entity.Updated = DateTime.UtcNow;
+        _db.Update(entity);
         await _db.SaveChangesAsync();
     }
 
@@ -385,6 +402,19 @@ public class ListingRepository
     {
         _db.ListingImages.Remove(image);
         await _db.SaveChangesAsync();
+    }
+
+    public async Task IncrementViewCountAsync(int id)
+    {
+        await _db.Listings
+            .Where(x => x.Id == id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.ViewCount, x => x.ViewCount + 1));
+    }
+
+    public async Task<int> GetUserListingCountAsync(Guid userId)
+    {
+        return await _db.Listings.CountAsync(x => x.OwnerUserId == userId);
     }
 }
 

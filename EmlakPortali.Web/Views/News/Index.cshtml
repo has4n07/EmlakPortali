@@ -1,0 +1,116 @@
+﻿@{
+    ViewData["Title"] = "Emlak Haberleri";
+    var newsItems = new[]
+    {
+        new { Slug="konut-fiyatlari-2026", Title="2026 Konut Fiyatlari", Category="Piyasa", Date="7 Mayis 2026", ReadMin=5, Img="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80", Summary="Turkiye genelinde konut fiyatlari artis gosterdi. Uzmanlar yilin geri kalani icin beklentilerini paylasiyor.", Hot=true },
+        new { Slug="kira-artislari-istanbul", Title="Istanbul Kira Artislari", Category="Kiralik", Date="5 Mayis 2026", ReadMin=4, Img="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80", Summary="Istanbul kira artis hizinin yavashladigi gozlemleniyor.", Hot=false },
+        new { Slug="yabanci-yatirimci-turizmi", Title="Yabanci Yatirimcilar Turkiye Gayrimenkulune Akiyor", Category="Yatirim", Date="3 Mayis 2026", ReadMin=6, Img="https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=600&q=80", Summary="Yabanci yatirimcilarin Turkiye gayrimenkul alimlari artti.", Hot=false },
+        new { Slug="enerji-verimli-binalar", Title="Enerji Verimli Binalara Vergi Avantaji", Category="Mevzuat", Date="1 Mayis 2026", ReadMin=3, Img="https://images.unsplash.com/photo-1518005068251-37900150dfca?w=600&q=80", Summary="Enerji sertifikali binalarda emlak vergisinde indirim uygulanacak.", Hot=false },
+        new { Slug="deprem-yonetmeligi-guncel", Title="Guncel Deprem Yonetmeligi", Category="Mevzuat", Date="28 Nisan 2026", ReadMin=7, Img="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&q=80", Summary="Guncel deprem yonetmeligi yeni konut projelerine standartlar getiriyor.", Hot=false },
+        new { Slug="akilli-ev-teknolojileri", Title="Akilli Ev Teknolojileri Standart Oluyor", Category="Teknoloji", Date="25 Nisan 2026", ReadMin=4, Img="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80", Summary="Yeni konut projelerinin cogu artik akilli ev sistemleriyle teslim ediliyor.", Hot=false },
+    };
+}
+
+<div class="d-flex align-items-center justify-content-between mb-5" style="padding-top:10px;">
+    <div>
+        <h1 class="fw-bold mb-1" style="font-family:'Outfit',sans-serif; font-size:2.2rem;">
+            Emlak <span class="text-gradient">Haberleri</span>
+        </h1>
+        <p class="text-muted mb-0">Turkiye gayrimenkul dunyasindan son gelismeler</p>
+    </div>
+    <div class="d-none d-md-flex gap-2 flex-wrap">
+        <button class="news-cat-btn btn btn-futuristic btn-sm px-3" data-cat="Tumu" style="border-radius:20px;">Tumu</button>
+        <button class="news-cat-btn btn btn-outline-futuristic btn-sm px-3" data-cat="Piyasa" style="border-radius:20px;">Piyasa</button>
+        <button class="news-cat-btn btn btn-outline-futuristic btn-sm px-3" data-cat="Kiralik" style="border-radius:20px;">Kiralik</button>
+        <button class="news-cat-btn btn btn-outline-futuristic btn-sm px-3" data-cat="Yatirim" style="border-radius:20px;">Yatirim</button>
+        <button class="news-cat-btn btn btn-outline-futuristic btn-sm px-3" data-cat="Mevzuat" style="border-radius:20px;">Mevzuat</button>
+        <button class="news-cat-btn btn btn-outline-futuristic btn-sm px-3" data-cat="Teknoloji" style="border-radius:20px;">Teknoloji</button>
+    </div>
+</div>
+
+@{var hotNews = newsItems.FirstOrDefault(n => n.Hot);}
+@if (hotNews != null)
+{
+    <a href="/News/Detail/@hotNews.Slug" class="text-decoration-none d-block mb-5">
+        <div class="futuristic-card overflow-hidden">
+            <div class="row g-0">
+                <div class="col-md-6">
+                    <img src="@hotNews.Img" class="w-100 h-100" style="object-fit:cover;min-height:300px;"
+                         alt="@hotNews.Title" onerror="this.src='https://placehold.co/600x300/1a1f2e/00d4ff?text=Haber'">
+                </div>
+                <div class="col-md-6 p-4 p-lg-5 d-flex flex-column justify-content-center">
+                    <div class="mb-3">
+                        <span class="badge px-3 py-1 me-2" style="background:linear-gradient(135deg,#00d4ff,#a855f7);border-radius:20px;font-size:0.75rem;">GUNDEM</span>
+                        <span class="badge px-3 py-1" style="background:rgba(255,255,255,0.07);border-radius:20px;font-size:0.75rem;color:#00d4ff;">@hotNews.Category</span>
+                    </div>
+                    <h2 class="fw-bold mb-3 text-white" style="font-family:'Outfit',sans-serif;line-height:1.3;">@hotNews.Title</h2>
+                    <p class="text-muted mb-4">@hotNews.Summary</p>
+                    <div class="d-flex gap-3 text-muted small">
+                        <span><i class="bi bi-calendar3 me-1"></i>@hotNews.Date</span>
+                        <span><i class="bi bi-clock me-1"></i>@hotNews.ReadMin dk okuma</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a>
+}
+
+<div class="row g-4" id="newsGrid">
+@foreach (var news in newsItems)
+{
+    <div class="col-md-6 col-lg-4 news-item" data-category="@news.Category">
+        <a href="/News/Detail/@news.Slug" class="text-decoration-none">
+            <div class="futuristic-card h-100 overflow-hidden news-card">
+                <div class="position-relative overflow-hidden" style="height:200px;">
+                    <img src="@news.Img" class="w-100 h-100 news-img" style="object-fit:cover;"
+                         alt="@news.Title" onerror="this.src='https://placehold.co/600x200/1a1f2e/00d4ff?text=Haber'">
+                    <div class="position-absolute top-0 start-0 m-2">
+                        <span class="badge px-2 py-1" style="background:rgba(0,212,255,0.15);color:#00d4ff;border-radius:12px;font-size:0.7rem;">@news.Category</span>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <h6 class="fw-bold text-white mb-2" style="font-family:'Outfit',sans-serif;">@news.Title</h6>
+                    <p class="text-muted small mb-3">@news.Summary</p>
+                    <div class="d-flex align-items-center justify-content-between text-muted" style="font-size:0.75rem;">
+                        <span><i class="bi bi-calendar3 me-1"></i>@news.Date</span>
+                        <span><i class="bi bi-clock me-1"></i>@news.ReadMin dk</span>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+}
+</div>
+
+@@section Scripts {
+    <script>
+        document.querySelectorAll('.news-cat-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.news-cat-btn').forEach(function(b) {
+                    b.className = 'news-cat-btn btn btn-outline-futuristic btn-sm px-3';
+                    b.style.borderRadius = '20px';
+                });
+                this.className = 'news-cat-btn btn btn-futuristic btn-sm px-3';
+                this.style.borderRadius = '20px';
+                var cat = this.getAttribute('data-cat');
+                document.querySelectorAll('.news-item').forEach(function(item) {
+                    item.style.display = (cat === 'Tumu' || item.getAttribute('data-category') === cat) ? '' : 'none';
+                });
+            });
+        });
+        document.querySelectorAll('.news-card').forEach(function(card) {
+            var img = card.querySelector('.news-img');
+            card.style.transition = 'transform 0.25s,box-shadow 0.25s';
+            card.addEventListener('mouseenter', function() {
+                card.style.transform = 'translateY(-4px)';
+                card.style.boxShadow = '0 12px 40px rgba(0,212,255,0.12)';
+                if(img) img.style.transform = 'scale(1.06)';
+            });
+            card.addEventListener('mouseleave', function() {
+                card.style.transform = '';
+                card.style.boxShadow = '';
+                if(img) img.style.transform = '';
+            });
+        });
+    </script>
+}

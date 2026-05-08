@@ -1,0 +1,92 @@
+﻿@{
+    ViewData["Title"] = "Favorilerim";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 mb-0">Favorilerim</h2>
+        <p class="text-muted small mb-0">Kaydettiğiniz ilanlar burada listelenir.</p>
+    </div>
+</div>
+
+<div id="errBox" class="alert alert-danger d-none"></div>
+<div class="row g-3" id="rows">
+    <div class="col-12 text-muted">Yükleniyor...</div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            const token = UserAuth.getToken();
+            if (!token) {
+                window.location.href = "/Account/Login";
+                return;
+            }
+
+            async function apiGet(url) {
+                const res = await fetch("https://localhost:7293" + url, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const text = await res.text();
+                let json = null; try { json = text ? JSON.parse(text) : null; } catch { }
+                if (!res.ok || (!json?.status && !json?.Status)) {
+                    throw new Error(json?.message || json?.Message || text || (res.status + " " + res.statusText));
+                }
+                return json;
+            }
+
+            async function load() {
+                try {
+                    const favRes = await apiGet("/api/favorites");
+                    const ids = favRes?.data || favRes?.Data || [];
+                    if (!ids.length) {
+                        $("#rows").html('<div class="col-12"><div class="glass-panel p-4 text-muted">Henüz favori ilanınız yok.</div></div>');
+                        return;
+                    }
+
+                    const requests = ids.map(id => apiGet(`/api/listings/${id}`).catch(() => null));
+                    const details = await Promise.all(requests);
+                    const items = details.map(x => x?.data || x?.Data).filter(Boolean);
+
+                    if (!items.length) {
+                        $("#rows").html('<div class="col-12"><div class="glass-panel p-4 text-muted">Favori ilan bulunamadı.</div></div>');
+                        return;
+                    }
+
+                    const html = items.map(d => {
+                        const id = d.id ?? d.Id;
+                        const title = d.title ?? d.Title;
+                        const price = d.price ?? d.Price;
+                        const city = d.cityName ?? d.CityName;
+                        const district = d.districtName ?? d.DistrictName;
+                        const img = imgUrl(d.coverImageUrl ?? d.CoverImageUrl, `https://picsum.photos/seed/${id}/600/400`);
+                        return `
+                            <div class="col-sm-6 col-xl-4">
+                                <a href="/Listings/Details/${id}" class="text-decoration-none text-main">
+                                    <div class="futuristic-card h-100">
+                                        <div class="card-img-wrapper" style="height:200px;">
+                                            <img src="${img}" class="w-100 h-100" loading="lazy" decoding="async" style="object-fit:cover;">
+                                            <div class="price-badge">${price?.toLocaleString?.("tr-TR") ?? price} ₺</div>
+                                        </div>
+                                        <div class="p-3">
+                                            <h6 class="fw-bold mb-2 text-white text-truncate">${title}</h6>
+                                            <div class="text-muted small">
+                                                <i class="bi bi-geo-alt me-1 text-info"></i>${city ?? ""} ${district ? "/ " + district : ""}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>`;
+                    }).join("");
+
+                    $("#rows").html(html);
+                } catch (e) {
+                    $("#errBox").removeClass("d-none").text(e?.message ?? String(e));
+                    $("#rows").html("");
+                }
+            }
+
+            load();
+        });
+    </script>
+}

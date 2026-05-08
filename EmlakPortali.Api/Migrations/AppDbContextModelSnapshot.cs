@@ -191,6 +191,57 @@ namespace EmlakPortali.Api.Migrations
                     b.ToTable("Cities");
                 });
 
+            modelBuilder.Entity("EmlakPortali.Api.Models.Entities.ContactMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("ListingId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("ReceiverId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SenderEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SenderName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SenderPhone")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("Updated")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListingId");
+
+                    b.HasIndex("ReceiverId");
+
+                    b.ToTable("ContactMessages");
+                });
+
             modelBuilder.Entity("EmlakPortali.Api.Models.Entities.District", b =>
                 {
                     b.Property<int>("Id")
@@ -329,6 +380,9 @@ namespace EmlakPortali.Api.Migrations
 
                     b.Property<DateTime?>("Updated")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -486,6 +540,23 @@ namespace EmlakPortali.Api.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("EmlakPortali.Api.Models.Entities.ContactMessage", b =>
+                {
+                    b.HasOne("EmlakPortali.Api.Models.Entities.Listing", "Listing")
+                        .WithMany()
+                        .HasForeignKey("ListingId");
+
+                    b.HasOne("EmlakPortali.Api.Models.Entities.ApplicationUser", "Receiver")
+                        .WithMany()
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+
+                    b.Navigation("Receiver");
                 });
 
             modelBuilder.Entity("EmlakPortali.Api.Models.Entities.District", b =>
