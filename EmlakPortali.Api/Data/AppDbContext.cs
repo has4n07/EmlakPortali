@@ -17,7 +17,6 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<ListingImage> ListingImages => Set<ListingImage>();
     public DbSet<FavoriteListing> FavoriteListings => Set<FavoriteListing>();
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
-    public DbSet<News> News => Set<News>();
     public DbSet<Project> Projects => Set<Project>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -84,15 +83,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             b.HasIndex(x => new { x.UserId, x.ListingId }).IsUnique();
         });
 
-        builder.Entity<News>(b =>
-        {
-            b.Property(x => x.Title).HasMaxLength(200).IsRequired();
-            b.Property(x => x.Slug).HasMaxLength(200).IsRequired();
-            b.Property(x => x.Summary).HasMaxLength(500);
-            b.Property(x => x.Category).HasMaxLength(100);
-            b.HasIndex(x => x.Slug).IsUnique();
-            b.HasIndex(x => x.Created);
-        });
+
 
         builder.Entity<Project>(b =>
         {

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Tüm İlanlar";
 }
 
@@ -26,7 +26,7 @@
                     <option value="2">Kiralık</option>
                 </select>
             </div>
-            <div class="row g-2 mb-4">
+            <div class="row g-2 mb-3">
                 <div class="col-6">
                     <label class="form-label small mb-1 text-muted">Min (₺)</label>
                     <input type="number" class="form-control" id="minPrice" placeholder="0" />
@@ -34,6 +34,37 @@
                 <div class="col-6">
                     <label class="form-label small mb-1 text-muted">Max (₺)</label>
                     <input type="number" class="form-control" id="maxPrice" placeholder="Limit yok" />
+                </div>
+            </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label small mb-1 text-muted">Min m²</label>
+                    <input type="number" class="form-control" id="minArea" placeholder="0" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-1 text-muted">Max m²</label>
+                    <input type="number" class="form-control" id="maxArea" placeholder="Limit yok" />
+                </div>
+            </div>
+            <div class="row g-2 mb-4">
+                <div class="col-6">
+                    <label class="form-label small mb-1 text-muted">Oda Sayısı</label>
+                    <select class="form-select" id="roomCount">
+                        <option value="">Farketmez</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4+</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small mb-1 text-muted">Banyo</label>
+                    <select class="form-select" id="bathCount">
+                        <option value="">Farketmez</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3+</option>
+                    </select>
                 </div>
             </div>
             <div class="d-grid gap-2">
@@ -118,6 +149,10 @@
                 if (url.get("listingType")) $("#listingType").val(url.get("listingType"));
                 if (url.get("minPrice")) $("#minPrice").val(url.get("minPrice"));
                 if (url.get("maxPrice")) $("#maxPrice").val(url.get("maxPrice"));
+                if (url.get("minArea")) $("#minArea").val(url.get("minArea"));
+                if (url.get("maxArea")) $("#maxArea").val(url.get("maxArea"));
+                if (url.get("roomCount")) $("#roomCount").val(url.get("roomCount"));
+                if (url.get("bathCount")) $("#bathCount").val(url.get("bathCount"));
             }
 
             async function load() {
@@ -134,12 +169,20 @@
                 const lt = $("#listingType").val();
                 const min = $("#minPrice").val();
                 const max = $("#maxPrice").val();
+                const minArea = $("#minArea").val();
+                const maxArea = $("#maxArea").val();
+                const rooms = $("#roomCount").val();
+                const baths = $("#bathCount").val();
 
                 if (cityId) qs.set("cityId", cityId);
                 if (districtId) qs.set("districtId", districtId);
                 if (lt) qs.set("listingType", lt);
                 if (min) qs.set("minPrice", min);
                 if (max) qs.set("maxPrice", max);
+                if (minArea) qs.set("minAreaM2", minArea);
+                if (maxArea) qs.set("maxAreaM2", maxArea);
+                if (rooms) qs.set("roomCount", rooms);
+                if (baths) qs.set("bathCount", baths);
 
                 try {
                     const res = await PublicApi.get("/api/listings/search?" + qs.toString());
@@ -205,6 +248,10 @@
                 $("#listingType").val("");
                 $("#minPrice").val("");
                 $("#maxPrice").val("");
+                $("#minArea").val("");
+                $("#maxArea").val("");
+                $("#roomCount").val("");
+                $("#bathCount").val("");
                 page = 1;
                 load();
             });

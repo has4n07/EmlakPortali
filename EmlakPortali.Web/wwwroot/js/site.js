@@ -118,18 +118,41 @@ window.AppNotify = (function () {
 })();
 
 // ── imgUrl: /uploads/... URL'lerini API base URL ile tamamlar ──────────────
-// API ve Web farklı portlarda çalıştığı için relative upload URL'leri
-// Web tarafında kırık olur. Bu helper otomatik düzeltir.
-window.imgUrl = function (url, fallback) {
-    if (!url) return fallback || "";
-    // Zaten absolute URL ise olduğu gibi döndür
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    // /uploads/ ile başlıyorsa API base URL ekle
-    if (url.startsWith("/uploads/") || url.startsWith("/images/")) {
-        const apiBase = (window.UserAuth && typeof window.UserAuth.getBaseUrl === "function")
-            ? window.UserAuth.getBaseUrl()
-            : "https://localhost:7293";
-        return apiBase + url;
+window.imgUrl = (function() {
+    const apiBase = "https://localhost:7293";
+    return function (url, fallback) {
+        if (!url) return fallback || "";
+        if (url.startsWith("http")) return url;
+        if (url.startsWith("/")) return apiBase + url;
+        return url;
+    };
+})();
+
+// ── Theme Toggle Logic ──────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", function() {
+    const themeBtn = document.getElementById("themeToggleBtn");
+    const themeIcon = document.getElementById("themeToggleIcon");
+    const htmlEl = document.documentElement;
+
+    function setTheme(theme) {
+        if (theme === "dark") {
+            htmlEl.setAttribute("data-theme", "dark");
+            if (themeIcon) themeIcon.className = "bi bi-sun";
+        } else {
+            htmlEl.removeAttribute("data-theme");
+            if (themeIcon) themeIcon.className = "bi bi-moon-stars";
+        }
+        localStorage.setItem("appTheme", theme);
     }
-    return url;
-};
+
+    // Initialize theme (default to dark)
+    const savedTheme = localStorage.getItem("appTheme") || "dark";
+    setTheme(savedTheme);
+
+    if (themeBtn) {
+        themeBtn.addEventListener("click", function() {
+            const currentTheme = htmlEl.hasAttribute("data-theme") ? "dark" : "light";
+            setTheme(currentTheme === "dark" ? "light" : "dark");
+        });
+    }
+});

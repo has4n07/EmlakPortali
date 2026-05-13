@@ -35,6 +35,10 @@ public class ListingRepository
         if (q.CategoryId.HasValue) query = query.Where(x => x.CategoryId == q.CategoryId.Value);
         if (q.MinPrice.HasValue) query = query.Where(x => x.Price >= q.MinPrice.Value);
         if (q.MaxPrice.HasValue) query = query.Where(x => x.Price <= q.MaxPrice.Value);
+        if (q.RoomCount.HasValue) query = query.Where(x => x.RoomCount == q.RoomCount.Value);
+        if (q.BathCount.HasValue) query = query.Where(x => x.BathCount == q.BathCount.Value);
+        if (q.MinAreaM2.HasValue) query = query.Where(x => x.AreaGrossM2 >= q.MinAreaM2.Value || x.AreaNetM2 >= q.MinAreaM2.Value);
+        if (q.MaxAreaM2.HasValue) query = query.Where(x => x.AreaGrossM2 <= q.MaxAreaM2.Value || x.AreaNetM2 <= q.MaxAreaM2.Value);
 
         query = q.OrderBy switch
         {

@@ -90,6 +90,10 @@
                     return;
                 }
 
+                let itemsJson = JSON.stringify(items);
+                if (window._lastThreadJson === itemsJson) return;
+                window._lastThreadJson = itemsJson;
+
                 const html = items.map(m => {
                     const mine = m.isMine ?? m.IsMine;
                     const msg = m.message ?? m.Message;
@@ -173,7 +177,7 @@
 
             (async function init() {
                 await refresh();
-                pollHandle = setInterval(refresh, 4000);
+                pollHandle = setInterval(refresh, 1500);
             })();
 
             $(window).on("beforeunload", function () {

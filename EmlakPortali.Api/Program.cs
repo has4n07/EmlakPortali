@@ -15,6 +15,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(builder => builder.Expire(TimeSpan.FromMinutes(2)));
+    options.AddPolicy("Lookups", builder => builder.Expire(TimeSpan.FromHours(1)));
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("MvcCors", policy =>
@@ -138,6 +147,9 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseCors("MvcCors");
+
+app.UseResponseCompression();
+app.UseOutputCache();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -48,14 +48,14 @@ public class ProjectsController : Controller
         return View();
     }
 
-    public async Task<IActionResult> Detail(string slug)
+    public async Task<IActionResult> Detail(string id)
     {
-        if (string.IsNullOrWhiteSpace(slug))
+        if (string.IsNullOrWhiteSpace(id))
             return RedirectToAction("Index");
 
         try
         {
-            var response = await _httpClient.GetAsync($"/api/projects/{slug}");
+            var response = await _httpClient.GetAsync($"/api/projects/{id}");
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -69,14 +69,14 @@ public class ProjectsController : Controller
         catch { }
 
         // Sample data fallback
-        object? projectItem = slug switch
+        object? projectItem = id switch
         {
             "panorama-istanbul" => new { name = "Panorama Istanbul", slug = "panorama-istanbul", city = "Istanbul", district = "Beyoglu", description = "Panorama Istanbul, sehirin kalbinde yukselen modern bir yasam projesidir.", imageUrl = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80", totalUnits = 450, deliveryDate = "2026 Q3", minPrice = 4500000m, status = "Satista", roomTypes = "1+1, 2+1, 3+1, 4+1" },
             "capital-residence" => new { name = "Capital Residence", slug = "capital-residence", city = "Ankara", district = "Cankaya", description = "Ankara'nin is merkezine yakin konumda yer alan proje.", imageUrl = "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80", totalUnits = 280, deliveryDate = "2025 Teslim", minPrice = 2800000m, status = "On Satis", roomTypes = "2+1, 3+1, 4+1" },
             "ege-park" => new { name = "Ege Park Villalari", slug = "ege-park", city = "Izmir", district = "Cesme", description = "Ege'nin incisi Izmir'de yasam.", imageUrl = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&q=80", totalUnits = 120, deliveryDate = "2026 Q1", minPrice = 8200000m, status = "Satista", roomTypes = "3+1, 4+1, 5+1" },
             "bogazici-towers" => new { name = "Bogazici Towers", slug = "bogazici-towers", city = "Istanbul", district = "Sariyer", description = "Istanbul Bogazi'na hakim luks yasam.", imageUrl = "https://images.unsplash.com/photo-1460472178825-e5240623afd5?w=600&q=80", totalUnits = 890, deliveryDate = "2027 Q2", minPrice = 12000000m, status = "On Satis", roomTypes = "2+1, 3+1, 4+1, 5+1" },
-            "riviera-homes" => new { name = "Riviera Homes", slug = "riviera-homes", city = "Antalya", district = "Konyaalti", description = "Antalya'nin muhtesem sahil seridi üzerinde.", imageUrl = "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80", totalUnits = 200, deliveryDate = "2025 Teslim", minPrice = 6500000m, status = "Satista", roomTypes = "1+1, 2+1, 3+1" },
-            "greenvalley-kagithane" => new { name = "Green Valley Kagithane", slug = "greenvalley-kagithane", city = "Istanbul", district = "Kagithane", description = "Kagithane'nin gelisen bölgesinde yükselen proje.", imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80", totalUnits = 340, deliveryDate = "2026 Q4", minPrice = 5100000m, status = "On Satis", roomTypes = "1+1, 2+1, 3+1" },
+            "riviera-homes" => new { name = "Riviera Homes", slug = "riviera-homes", city = "Antalya", district = "Konyaalti", description = "Antalya'nin muhtesem sahil seridi Ã¼zerinde.", imageUrl = "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&q=80", totalUnits = 200, deliveryDate = "2025 Teslim", minPrice = 6500000m, status = "Satista", roomTypes = "1+1, 2+1, 3+1" },
+            "greenvalley-kagithane" => new { name = "Green Valley Kagithane", slug = "greenvalley-kagithane", city = "Istanbul", district = "Kagithane", description = "Kagithane'nin gelisen bÃ¶lgesinde yÃ¼kselen proje.", imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&q=80", totalUnits = 340, deliveryDate = "2026 Q4", minPrice = 5100000m, status = "On Satis", roomTypes = "1+1, 2+1, 3+1" },
             _ => null
         };
 
@@ -87,7 +87,7 @@ public class ProjectsController : Controller
             return View();
         }
 
-        ViewData["Title"] = "Proje Bulunamadý";
+        ViewData["Title"] = "Proje BulunamadÄ±";
         return View();
     }
 }

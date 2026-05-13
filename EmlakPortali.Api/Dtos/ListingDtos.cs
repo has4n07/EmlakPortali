@@ -18,6 +18,10 @@ public class ListingSearchQueryDto : PagedRequestDto
     public int? CategoryId { get; set; }
     public decimal? MinPrice { get; set; }
     public decimal? MaxPrice { get; set; }
+    public int? RoomCount { get; set; }
+    public int? BathCount { get; set; }
+    public int? MinAreaM2 { get; set; }
+    public int? MaxAreaM2 { get; set; }
     public ListingOrderBy OrderBy { get; set; } = ListingOrderBy.Newest;
 }
 

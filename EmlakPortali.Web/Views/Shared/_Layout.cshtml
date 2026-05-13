@@ -15,14 +15,14 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/EmlakPortali.Web.styles.css" asp-append-version="true" />
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm glass-nav fixed-top mb-3">
             <div class="container-fluid px-4">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Emlak<span>Portali</span></a>
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Emlak<span class="text-gradient">Portali</span></a>
                 <button class="navbar-toggler btn-outline-futuristic" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation" style="border-color: var(--accent-cyan);">
-                    <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="bi bi-list"></i>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1" id="mainNavLinks">
@@ -49,9 +49,6 @@
                                 <li><a class="dropdown-item" href="/Projects?city=antalya"><i class="bi bi-geo-alt me-2"></i>Antalya</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/News"><i class="bi bi-newspaper me-1"></i>Haberler</a>
-                        </li>
                     </ul>
                     <ul class="navbar-nav align-items-center">
                         <li class="nav-item me-3">
@@ -75,6 +72,11 @@
                                 <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i> Çıkış Yap</a></li>
                             </ul>
                         </li>
+                        <li class="nav-item ms-2 d-flex align-items-center">
+                            <button id="themeToggleBtn" class="btn btn-outline-secondary btn-sm rounded-circle" style="width: 36px; height: 36px; padding: 0; line-height: 32px; color: var(--nav-text); border-color: var(--glass-border);">
+                                <i class="bi bi-moon-stars" id="themeToggleIcon"></i>
+                            </button>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -82,15 +84,60 @@
     </header>
     
     <!-- Add padding top to account for fixed navbar -->
-    <div class="container" style="padding-top: 80px; min-height: calc(100vh - 60px);">
+    <div class="container flex-grow-1" style="padding-top: 100px;">
         <main role="main" class="pb-5">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="footer text-muted glass-nav text-center">
+    <footer class="footer pt-5 pb-4 mt-auto" style="background: var(--footer-bg); border-top: 1px solid var(--glass-border); position: relative; height: auto !important; line-height: normal !important;">
         <div class="container">
-            &copy; 2026 - Emlak Portali - <span class="text-gradient fw-bold">Hasan Esmer</span>
+            <div class="row g-4 mb-4">
+                <div class="col-lg-4">
+                    <h5 class="fw-bold mb-3 text-white">Emlak<span class="text-gradient">Portali</span></h5>
+                    <p class="text-muted small mb-3" style="white-space: normal !important; line-height: 1.5 !important;">Türkiye'nin en modern ve kullanıcı dostu gayrimenkul platformu. Hayalindeki evi veya karlı yatırım fırsatını hemen keşfet.</p>
+                    <div class="d-flex gap-2">
+                        <a href="#" class="btn btn-outline-futuristic btn-sm rounded-circle" style="width: 36px; height: 36px; padding: 0; line-height: 32px;"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="btn btn-outline-futuristic btn-sm rounded-circle" style="width: 36px; height: 36px; padding: 0; line-height: 32px;"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" class="btn btn-outline-futuristic btn-sm rounded-circle" style="width: 36px; height: 36px; padding: 0; line-height: 32px;"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="btn btn-outline-futuristic btn-sm rounded-circle" style="width: 36px; height: 36px; padding: 0; line-height: 32px;"><i class="bi bi-linkedin"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <h6 class="text-white mb-3">Hızlı Linkler</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li class="mb-2"><a href="/" class="text-decoration-none text-muted hover-cyan">Ana Sayfa</a></li>
+                        <li class="mb-2"><a href="/Listings" class="text-decoration-none text-muted hover-cyan">Tüm İlanlar</a></li>
+                        <li class="mb-2"><a href="/Projects" class="text-decoration-none text-muted hover-cyan">Projeler</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <h6 class="text-white mb-3">Kategoriler</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li class="mb-2"><a href="/Listings?listingType=1" class="text-decoration-none text-muted hover-cyan">Satılık Evler</a></li>
+                        <li class="mb-2"><a href="/Listings?listingType=2" class="text-decoration-none text-muted hover-cyan">Kiralık Evler</a></li>
+                        <li class="mb-2"><a href="/Listings?categoryId=2" class="text-decoration-none text-muted hover-cyan">Arsa & Arazi</a></li>
+                        <li class="mb-2"><a href="/Listings?categoryId=3" class="text-decoration-none text-muted hover-cyan">İş Yeri</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4 col-md-4">
+                    <h6 class="text-white mb-3">İletişim</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li class="mb-2"><i class="bi bi-geo-alt me-2 text-gradient"></i> Maslak Mah. Büyükdere Cad. No:1, Şişli, İstanbul</li>
+                        <li class="mb-2"><i class="bi bi-envelope me-2 text-gradient"></i> info@emlakportali.local</li>
+                        <li class="mb-2"><i class="bi bi-telephone me-2 text-gradient"></i> +90 (850) 123 45 67</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-top pt-3 mt-3 d-flex flex-column flex-md-row justify-content-between align-items-center" style="border-color: rgba(255,255,255,0.05) !important;">
+                <div class="small text-muted mb-2 mb-md-0">
+                    &copy; 2026 - Emlak Portali - <span class="text-gradient fw-bold">Hasan Esmer</span>. Tüm hakları saklıdır.
+                </div>
+                <div class="small text-muted">
+                    <a href="#" class="text-decoration-none text-muted me-3 hover-cyan">Gizlilik Politikası</a>
+                    <a href="#" class="text-decoration-none text-muted hover-cyan">Kullanım Şartları</a>
+                </div>
+            </div>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

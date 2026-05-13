@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.OutputCaching;
 using System.Security.Claims;
 using EmlakPortali.Api.Dtos;
 using EmlakPortali.Api.Models;
@@ -30,6 +31,7 @@ public class ListingsController : ControllerBase
     }
 
     [HttpGet]
+    [OutputCache]
     public async Task<DataResult<object>> PublicList([FromQuery] int take = 50)
     {
         var data = await _listingRepository.GetPublicListAsync(take);
@@ -37,6 +39,7 @@ public class ListingsController : ControllerBase
     }
 
     [HttpGet("search")]
+    [OutputCache]
     public async Task<DataResult<object>> Search([FromQuery] ListingSearchQueryDto q)
     {
         var data = await _listingRepository.SearchPublicAsync(q);
@@ -44,6 +47,7 @@ public class ListingsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+    [OutputCache]
     public async Task<DataResult<object>> PublicDetail(int id)
     {
         var data = await _listingRepository.GetPublicDetailAsync(id);

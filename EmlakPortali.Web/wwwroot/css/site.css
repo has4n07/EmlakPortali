@@ -1,5 +1,6 @@
 :root {
-  --bg-color: #f4f6f8;
+  /* Light Theme */
+  --bg-color: #eaf0f6;
   --bg-secondary: #ffffff;
   --text-main: #0f172a;
   --text-muted: #64748b;
@@ -8,6 +9,29 @@
   --accent-pink: #ec4899;
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(255, 255, 255, 0.8);
+  --bg-gradient-1: rgba(139, 92, 246, 0.08);
+  --bg-gradient-2: rgba(14, 165, 233, 0.08);
+  --nav-bg: rgba(255, 255, 255, 0.95);
+  --nav-text: #0f172a;
+  --footer-bg: #ffffff;
+}
+
+[data-theme="dark"] {
+  /* Dark Theme */
+  --bg-color: #0b0f19;
+  --bg-secondary: #111827;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-cyan: #00d4ff;
+  --accent-purple: #a855f7;
+  --accent-pink: #ec4899;
+  --glass-bg: rgba(17, 24, 39, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --bg-gradient-1: rgba(168, 85, 247, 0.12);
+  --bg-gradient-2: rgba(0, 212, 255, 0.12);
+  --nav-bg: rgba(15, 23, 42, 0.95);
+  --nav-text: #f8fafc;
+  --footer-bg: #111827;
 }
 
 html {
@@ -23,13 +47,16 @@ html {
   min-height: 100%;
 }
 body {
-  margin-bottom: 80px;
   background-color: var(--bg-color);
   color: var(--text-main);
   font-family: 'Outfit', 'Inter', sans-serif;
-  background-image: radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), transparent 40%),
-                    radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.08), transparent 40%);
+  background-image: 
+    radial-gradient(circle at 15% 50%, var(--bg-gradient-1), transparent 40%),
+    radial-gradient(circle at 85% 30%, var(--bg-gradient-2), transparent 40%);
   background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 /* Override text-white since it was used in dark theme */
@@ -51,12 +78,12 @@ body {
 }
 
 .glass-nav {
-  background: rgba(15, 23, 42, 0.95) !important;
+  background: var(--nav-bg) !important;
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
 }
 .glass-nav .nav-link, .glass-nav .navbar-brand {
-  color: #f8fafc !important;
+  color: var(--nav-text) !important;
 }
 .glass-nav .nav-link:hover {
   color: var(--accent-cyan) !important;
@@ -77,16 +104,19 @@ body {
 
 /* Inputs & Buttons */
 .form-control, .form-select {
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   color: var(--text-main);
   transition: all 0.3s ease;
 }
 .form-control:focus, .form-select:focus {
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 10px rgba(14, 165, 233, 0.15);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.15);
   color: var(--text-main);
+}
+.form-control::placeholder {
+  color: rgba(255, 255, 255, 0.4);
 }
 .form-select option {
     background-color: var(--bg-secondary);
@@ -204,13 +234,13 @@ body {
 .nav-link { color: var(--text-main) !important; transition: color 0.3s; font-weight: 500; }
 .nav-link:hover { color: var(--accent-cyan) !important; }
 
+.hover-cyan { transition: color 0.3s ease; }
+.hover-cyan:hover { color: var(--accent-cyan) !important; }
+
 footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  height: 60px;
-  line-height: 60px;
+  margin-top: auto;
   background: var(--bg-secondary);
+  border-top: 1px solid var(--glass-border);
 }
 
 .app-notify-container {

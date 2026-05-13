@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.OutputCaching;
 using EmlakPortali.Api.Models;
 using EmlakPortali.Api.Repositories;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpGet("cities")]
+    [OutputCache(PolicyName = "Lookups")]
     public async Task<DataResult<object>> Cities()
     {
         var data = await _lookupRepository.GetCitiesAsync();
@@ -23,6 +25,7 @@ public class LookupsController : ControllerBase
     }
 
     [HttpGet("cities/{cityId:int}/districts")]
+    [OutputCache(PolicyName = "Lookups")]
     public async Task<DataResult<object>> Districts(int cityId)
     {
         var data = await _lookupRepository.GetDistrictsByCityAsync(cityId);

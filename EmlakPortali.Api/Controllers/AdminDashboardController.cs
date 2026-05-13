@@ -36,8 +36,10 @@ public class AdminDashboardController : ControllerBase
         }
 
         var totalListings = await query.CountAsync();
-        var pendingListings = await query.CountAsync(x => !x.IsApproved);
         var activeListings = await query.CountAsync(x => x.IsApproved && x.IsActive);
+
+        var msgQuery = _db.ContactMessages.AsQueryable().Where(x => x.ReceiverId == userId);
+        var newMessages = await msgQuery.CountAsync(x => !x.IsRead);
 
         int? totalUsers = null;
         int? activeUsers = null;
@@ -55,7 +57,7 @@ public class AdminDashboardController : ControllerBase
             Data = new
             {
                 totalListings,
-                pendingListings,
+                newMessages,
                 activeListings,
                 totalUsers,
                 activeUsers
